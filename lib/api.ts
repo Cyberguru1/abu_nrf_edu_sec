@@ -1,4 +1,6 @@
-import {env} from '../config/config';
+import { env } from '../config/config';
+
+const API_BASE_URL = env.API_BASE_URL;
 
 interface ApiResponse<T> {
   data?: T;

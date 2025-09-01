@@ -1,6 +1,10 @@
 import { env } from '../config/config';
 
+import { env } from '../config/config';
+
+
 // /lib/apiClient.ts
+const API_BASE_URL = env.API_BASE_URL;
 const API_BASE_URL = env.API_BASE_URL;
 
 export const apiClient = {

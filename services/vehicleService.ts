@@ -2,6 +2,8 @@ import { Vehicle } from '@/types/auth';
 import { transformVehicle } from '@/lib/utils';
 import { env } from '../config/config';
 
+
+const API_BASE_URL = env.API_BASE_URL;
 const API_BASE_URL = env.API_BASE_URL;
 
 
