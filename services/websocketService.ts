@@ -1,3 +1,5 @@
+import { env } from "@/config/config";
+
 // services/websocketService.ts
 export interface WebSocketMessage {
   type: 'exit_confirmation' | 'security_alert' | 'response';
@@ -17,7 +19,7 @@ class WebSocketService {
   private connectionHandlers: ((connected: boolean) => void)[] = [];
 
 
-  constructor(private baseUrl: string = 'ws://localhost:10000/ws') {}
+  constructor(private baseUrl: string = env.WS_URL) { }
 
   private notifyConnectionStatus() {
     this.connectionHandlers.forEach(handler => handler(this.isConnected));
@@ -64,10 +66,10 @@ class WebSocketService {
     try {
       const data: WebSocketMessage = JSON.parse(event.data);
       console.log('WebSocket message received:', data);
-      
+
       // Notify all message handlers
       this.messageHandlers.forEach(handler => handler(data));
-      
+
     } catch (error) {
       console.error('Failed to parse WebSocket message:', error);
     }
@@ -79,7 +81,7 @@ class WebSocketService {
     this.ws = null;
     this.notifyConnectionStatus(); // Notify about connection change
 
-    
+
     // Attempt reconnect if it wasn't a clean close
     if (!event.wasClean) {
       const token = localStorage.getItem('authToken');

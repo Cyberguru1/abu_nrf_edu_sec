@@ -1,3 +1,5 @@
+import { env } from "@/config/config";
+
 export interface ApiError {
   message: string;
   code?: number;
@@ -9,11 +11,10 @@ export interface ApiResponse<T> {
   error?: ApiError;
 }
 
-const API_BASE_URL = 'https://surveilx-backend-fgpe.onrender.com/api/v1';
 
 // /lib/api.ts
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${env.API_BASE_URL}${endpoint}`, {
     ...options,
     mode: 'cors',
     headers: {

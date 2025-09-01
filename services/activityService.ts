@@ -1,7 +1,8 @@
 // services/activityService.ts
+import { env } from '@/config/config';
 import { VehicleActivity } from '@/types/auth';
 
-const API_BASE_URL = 'https://surveilx-backend-fgpe.onrender.com/api/v1';
+
 
 export const activityService = {
   async getVehicleActivities(
@@ -11,7 +12,7 @@ export const activityService = {
   try {
     console.log(`Fetching activities for vehicle: ${vehicleId}`);
     
-    const response = await fetch(`${API_BASE_URL}/vehicles/${vehicleId}/activities`, {
+    const response = await fetch(`${env.API_BASE_URL}/vehicles/${vehicleId}/activities`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

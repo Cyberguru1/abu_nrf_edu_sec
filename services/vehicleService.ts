@@ -1,7 +1,6 @@
 import { Vehicle } from '@/types/auth';
 import { transformVehicle } from '@/lib/utils';
-
-const API_BASE_URL = 'https://surveilx-backend-fgpe.onrender.com/api/v1';
+import { env } from '@/config/config';
 
 
 export const vehicleService = {
@@ -15,7 +14,7 @@ export const vehicleService = {
     }
   ): Promise<{ vehicle?: Vehicle; error?: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/vehicles/register`, { // Updated endpoint
+      const response = await fetch(`${env.API_BASE_URL}/vehicles/register`, { // Updated endpoint
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,7 +46,7 @@ export const vehicleService = {
   },
   async getVehicles(token: string): Promise<{ vehicles?: Vehicle[]; error?: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/vehicles/fetch_vehicles`, {
+      const response = await fetch(`${env.API_BASE_URL}/vehicles/fetch_vehicles`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -79,7 +78,7 @@ export const vehicleService = {
     vehicleId: string
   ): Promise<{ success?: boolean; error?: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/vehicles/deregister/${vehicleId}`, {
+      const response = await fetch(`${env.API_BASE_URL}/vehicles/deregister/${vehicleId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

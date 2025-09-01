@@ -1,5 +1,6 @@
+import { env } from "@/config/config";
+
 // /lib/apiClient.ts
-const API_BASE_URL = 'https://surveilx-backend-fgpe.onrender.com/api/v1';
 
 export const apiClient = {
   async get(url: string) {
@@ -21,7 +22,7 @@ export const apiClient = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${env.API_BASE_URL}${url}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined
