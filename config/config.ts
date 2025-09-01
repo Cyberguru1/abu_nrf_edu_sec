@@ -17,7 +17,7 @@ export const env: Env = {
   }
   if (!process.env.NEXT_PUBLIC_API_BASEURL) {
     console.warn('env.API_BASE_URL not found in environment, using default value');
-    missingVars.push("NEXT_PUBLIC_env.API_BASE_URL");
+    missingVars.push("NEXT_PUBLIC_API_BASE_URL");
   }
 
   if (missingVars.length > 0) {
