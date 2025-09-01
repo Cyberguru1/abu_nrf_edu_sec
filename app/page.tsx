@@ -1332,43 +1332,43 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     )
   }
 
-  renderWebSocketStatus() {
-    return (
-      <div className={`fixed top-4 right-4 px-3 py-1 rounded-full text-xs font-medium ${
-        this.state.webSocketConnected 
-          ? 'bg-green-100 text-green-800' 
-          : 'bg-red-100 text-red-800'
-      }`}>
-        {this.state.webSocketConnected ? '🟢 Connected' : '🔴 Disconnected'}
-      </div>
-    );
-  }
+  // renderWebSocketStatus() {
+  //   return (
+  //     <div className={`fixed top-4 right-4 px-3 py-1 rounded-full text-xs font-medium ${
+  //       this.state.webSocketConnected 
+  //         ? 'bg-green-100 text-green-800' 
+  //         : 'bg-red-100 text-red-800'
+  //     }`}>
+  //       {this.state.webSocketConnected ? '🟢 Connected' : '🔴 Disconnected'}
+  //     </div>
+  //   );
+  // }
 
-  testWebSocketMessage = () => {
-    const testMessage: WebSocketMessage = {
-      type: 'exit_confirmation',
-      pending_id: 'test-pending-123',
-      token: 'test-token-456',
-      message: 'Vehicle ABC-123 is exiting the premises. Are you the driver?'
-    };
+  // testWebSocketMessage = () => {
+  //   const testMessage: WebSocketMessage = {
+  //     type: 'exit_confirmation',
+  //     pending_id: 'test-pending-123',
+  //     token: 'test-token-456',
+  //     message: 'Vehicle ABC-123 is exiting the premises. Are you the driver?'
+  //   };
     
-    this.handleExitConfirmation(testMessage);
-  }
+  //   this.handleExitConfirmation(testMessage);
+  // }
 
-  // Add a test button in your render method for development
-  renderTestButton() {
-    if (process.env.NODE_ENV === 'development') {
-      return (
-        <button
-          onClick={this.testWebSocketMessage}
-          className="fixed top-20 right-4 bg-blue-500 text-white px-3 py-1 rounded text-sm"
-        >
-          Test WebSocket
-        </button>
-      );
-    }
-    return null;
-  }
+  // // Add a test button in your render method for development
+  // renderTestButton() {
+  //   if (process.env.NODE_ENV === 'development') {
+  //     return (
+  //       <button
+  //         onClick={this.testWebSocketMessage}
+  //         className="fixed top-20 right-4 bg-blue-500 text-white px-3 py-1 rounded text-sm"
+  //       >
+  //         Test WebSocket
+  //       </button>
+  //     );
+  //   }
+  //   return null;
+  // }
 
 
 
@@ -1379,8 +1379,6 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   return (
       <>
         {currentPage}
-        {this.renderWebSocketStatus()}
-        {this.renderTestButton()}
         {this.state.showNotification && (
           <Notification
             message={this.state.notificationMessage}
