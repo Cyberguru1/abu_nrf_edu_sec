@@ -9,7 +9,7 @@ export interface ApiResponse<T> {
   error?: ApiError;
 }
 
-const API_BASE_URL = 'https://surveilx-backend.onrender.com/api/v1';
+const API_BASE_URL = 'https://surveilx-backend-fgpe.onrender.com/api/v1';
 
 // /lib/api.ts
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {

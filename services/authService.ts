@@ -1,7 +1,7 @@
 // /services/authService.ts
 import { User, RegisterData, LoginData, Profile } from '@/types/auth';
 
-const API_BASE_URL = 'https://surveilx-backend.onrender.com/api/v1';
+const API_BASE_URL = 'https://surveilx-backend-fgpe.onrender.com/api/v1';
 
 interface BackendUser {
   ID?: string;
