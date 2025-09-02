@@ -51,6 +51,7 @@ import {
   Trash2,
   Activity,
 } from "lucide-react"
+import { verifyVehiclePlate } from "@/services/verifyPlateNumber"
 
 type AppUser = {
   id: string
@@ -1286,8 +1287,8 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     return (
       <div
         className={`fixed bottom-1 right-1 px-2 py-1 rounded-full text-xs font-medium ${this.state.webSocketConnected
-            ? 'bg-green-100 text-green-800'
-            : 'bg-red-100 text-red-800'
+          ? 'bg-green-100 text-green-800'
+          : 'bg-red-100 text-red-800'
           }`}
       >
         {this.state.webSocketConnected ? '🟢 Connected' : '🔴 Disconnected'}

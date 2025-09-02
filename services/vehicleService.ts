@@ -26,17 +26,17 @@ export const vehicleService = {
         body: JSON.stringify(vehicleData)
       });
 
-       if (!response.ok) {
-            const errorData = await response.json();
-            // Handle 409 Conflict specifically
-            if (response.status === 409) {
-                return { error: 'This vehicle plate number is already registered' };
-            }
-            return { error: errorData.message || 'Vehicle registration failed' };
+      if (!response.ok) {
+        const errorData = await response.json();
+        // Handle 409 Conflict specifically
+        if (response.status === 409) {
+          return { error: 'This vehicle plate number is already registered' };
         }
+        return { error: errorData.message || 'Vehicle registration failed' };
+      }
 
       const responseData = await response.json();
-      return { 
+      return {
         vehicle: {
           ...responseData.data || responseData,
           plateNumber: (responseData.data?.plate_number || responseData.plate_number) // Map to frontend field
@@ -62,7 +62,7 @@ export const vehicleService = {
       }
 
       const responseData = await response.json();
-      
+
       // Transform API response to match frontend Vehicle type
       const vehicles = (responseData.data || responseData).map((vehicle: any) => ({
         ...vehicle,
@@ -81,7 +81,7 @@ export const vehicleService = {
     vehicleId: string
   ): Promise<{ success?: boolean; error?: string }> {
     try {
-      const response = await fetch(`${env.API_BASE_URL}/vehicles/deregister/${vehicleId}`, {
+      const response = await fetch(`${env.API_BASE_URL}/vehicles/${vehicleId}/deregister`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

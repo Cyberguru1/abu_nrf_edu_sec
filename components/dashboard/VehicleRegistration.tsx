@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { verifyVehiclePlate } from "@/services/verifyPlateNumber";
 import { Car } from "lucide-react";
 
 interface VehicleRegistrationProps {
@@ -30,10 +31,35 @@ export const VehicleRegistration = ({
   onCancel,
 }: VehicleRegistrationProps) => {
   const vehicleTypes = [
-  { value: 'bus', label: 'Bus' },
-  { value: 'car', label: 'Car' },
-  { value: 'bike', label: 'Bike' }
+    { value: 'bus', label: 'Bus' },
+    { value: 'car', label: 'Car' },
+    { value: 'bike', label: 'Bike' }
   ];
+
+  const handlePlateNumberBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const plate = formData.plateNumber;
+    if (plate) {
+      try {
+        const resp = await verifyVehiclePlate(plate);
+        console.log(resp);
+        // Update form data with the response
+        if (resp.data?.vehicleMake) {
+          formData.model = resp.data.vehicleMake;
+        }
+        if (resp.data?.vehicleColor) {
+          formData.color = resp.data.vehicleColor;
+        }
+        // Set vehicle type to car
+        onTypeChange('car');
+      } catch (error) {
+        console.error("Error verifying plate number:", error);
+      }
+    } else {
+      formData.color = '';
+      formData.model = '';
+      formData.color = '';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -58,6 +84,7 @@ export const VehicleRegistration = ({
                     id="plateNumber"
                     value={formData.plateNumber}
                     onChange={(e) => onPlateNumberChange(e.target.value)}
+                    onBlur={handlePlateNumberBlur}
                     placeholder="e.g., ABC-123"
                     required
                     maxLength={15}
