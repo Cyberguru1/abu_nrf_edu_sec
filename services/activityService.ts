@@ -1,11 +1,8 @@
-import {env } from '../config/config';
-
 // services/activityService.ts
 import { VehicleActivity } from '@/types/auth';
 import { env } from '../config/config';
 
 
-const API_BASE_URL = env.API_BASE_URL;
 const API_BASE_URL = env.API_BASE_URL;
 
 export const activityService = {
