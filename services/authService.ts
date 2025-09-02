@@ -1,6 +1,6 @@
 // /services/authService.ts
+import { env } from '@/config/config';
 import { User, RegisterData, LoginData, Profile } from '@/types/auth';
-import { env } from '../config/config';
 
 
 const API_BASE_URL = env.API_BASE_URL;
@@ -51,7 +51,7 @@ export const authService = {
 
     // 2. Enhanced request configuration
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const response = await fetch(`${env.API_BASE_URL}/auth/register`, {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -111,7 +111,7 @@ export const authService = {
     };
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${env.API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ export const authService = {
 export const profileService = {
   async getProfile(token: string, userId: string): Promise<{ profile?: Profile; error?: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/profile/`, {
+      const response = await fetch(`${env.API_BASE_URL}/profile/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -184,7 +184,7 @@ export const profileService = {
     }
   ): Promise<{ profile?: Profile; error?: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/profile/`, {
+      const response = await fetch(`${env.API_BASE_URL}/profile/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

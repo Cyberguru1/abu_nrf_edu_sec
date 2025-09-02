@@ -16,7 +16,7 @@ const API_BASE_URL = env.API_BASE_URL;
 
 // /lib/api.ts
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${env.API_BASE_URL}${endpoint}`, {
     ...options,
     mode: 'cors',
     headers: {

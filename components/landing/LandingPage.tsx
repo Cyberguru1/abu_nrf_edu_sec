@@ -39,9 +39,9 @@ export const LandingPage = ({
               >
                 Register Vehicle
               </Button>
-              <Link href="#dashboard" className="text-gray-700 hover:text-teal-600 transition-colors">
+              {/* <Link href="#dashboard" className="text-gray-700 hover:text-teal-600 transition-colors">
                 Security Dashboard
-              </Link>
+              </Link> */}
               <Link href="#contact" className="text-gray-700 hover:text-teal-600 transition-colors">
                 Contact
               </Link>
