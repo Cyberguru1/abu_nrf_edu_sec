@@ -1,13 +1,15 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { LogIn, Loader2} from "lucide-react"
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { LogIn, Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface LoginFormProps {
   email: string;
   password: string;
   loading: boolean;
+  error: string | null;
   onEmailChange: (email: string) => void;
   onPasswordChange: (password: string) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -15,16 +17,23 @@ interface LoginFormProps {
   onNavigateToHome: () => void;
 }
 
-export const LoginForm = ({
+export const LoginForm: React.FC<LoginFormProps> = ({
   email,
   password,
   loading,
+  error,
   onEmailChange,
   onPasswordChange,
   onSubmit,
   onNavigateToRegister,
   onNavigateToHome,
-}: LoginFormProps) => {
+}) => {
+  const [showPassword, setShowPassword] = useState(false);
+
+  const togglePasswordVisibility = () => {
+    setShowPassword((prev) => !prev);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -50,20 +59,38 @@ export const LoginForm = ({
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => onPasswordChange(e.target.value)}
-                required
-                placeholder="Enter your password"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => onPasswordChange(e.target.value)}
+                  required
+                  placeholder="Enter your password"
+                  className="pr-10" // Add padding to accommodate the button
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                  onClick={togglePasswordVisibility}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={loading}
-            >
+            {error && (
+              <p className="text-sm text-red-600" role="alert">
+                {error}
+              </p>
+            )}
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -86,9 +113,9 @@ export const LoginForm = ({
             </Button>
             <div className="text-center text-sm mt-4">
               Don't have an account yet?{' '}
-              <Button 
-                variant="link" 
-                className="text-blue-600 hover:text-blue-800 p-0 h-auto" 
+              <Button
+                variant="link"
+                className="text-blue-600 hover:text-blue-800 p-0 h-auto"
                 onClick={onNavigateToRegister}
               >
                 Register
@@ -100,4 +127,3 @@ export const LoginForm = ({
     </div>
   );
 };
-

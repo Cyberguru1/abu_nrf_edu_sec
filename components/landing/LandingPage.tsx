@@ -35,7 +35,7 @@ export const LandingPage = ({
               <Button 
                 variant="link" 
                 className="text-gray-700 hover:text-teal-600 transition-colors p-0 h-auto"
-                onClick={onNavigateToRegister}
+                onClick={onNavigateToLogin}
               >
                 Register Vehicle
               </Button>
@@ -50,7 +50,7 @@ export const LandingPage = ({
             <div className="flex items-center space-x-4">
               <Button 
                 className="bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                onClick={onNavigateToRegister}
+                onClick={onNavigateToLogin}
               >
                 Get Started
               </Button>

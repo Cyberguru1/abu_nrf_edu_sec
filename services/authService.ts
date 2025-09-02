@@ -119,10 +119,10 @@ export const authService = {
       });
 
       const responseData = await response.json();
-      
+
       if (!response.ok) {
         return { 
-          error: responseData.message || 'Login failed' 
+          error: responseData.error || 'Login failed..' 
         };
       }
 

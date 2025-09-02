@@ -27,7 +27,7 @@ import { ProfileContainer } from "@/components/dashboard/ProfileContainer"
 import { ProfileView } from "@/components/dashboard/ProfileView"
 import { User } from "lucide-react"
 import { RegisteredVehicles } from "@/components/dashboard/RegisteredVehicles"
-import { vehicleService } from "@/services/vehicleService"  
+import { vehicleService } from "@/services/vehicleService"
 import { activityService } from "@/services/activityService"
 import { VehicleActivity } from "@/types/auth"
 import { webSocketService, WebSocketMessage } from "@/services/websocketService"
@@ -99,6 +99,7 @@ type ActivityLog = {
 
 type VehicleSecuritySystemState = {
   currentPage: string
+  loginError: string | null;
   currentUser: AppUser | null
   users: AppUser[]
   vehicles: Vehicle[]
@@ -106,10 +107,11 @@ type VehicleSecuritySystemState = {
   isMenuOpen: boolean
   loginForm: { email: string; password: string }
   registerForm: { name: string; email: string; password: string }
-  profileForm: { name: string; email: string; phone: string;}
+  profileForm: { name: string; email: string; phone: string; }
   vehicleForm: { plateNumber: string; model: string; color: string; type: string }
   loading: boolean
-  notification: {show: boolean; message: string; type: 'success' | 'error' | 'info';
+  notification: {
+    show: boolean; message: string; type: 'success' | 'error' | 'info';
   };
   showNotification: boolean;
   notificationMessage: string;
@@ -136,6 +138,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   constructor(props: {}) {
     super(props)
     this.state = {
+      loginError: null,
       currentPage: "landing",
       currentUser: null,
       users: [],
@@ -146,10 +149,10 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       isMenuOpen: false,
       loginForm: { email: "", password: "" },
       registerForm: { name: "", email: "", password: "" },
-      profileForm: { name: "", email: "", phone: ""},
+      profileForm: { name: "", email: "", phone: "" },
       vehicleForm: { plateNumber: "", model: "", color: "", type: "" },
 
-      notification: {show: false, message: '', type: 'info'},
+      notification: { show: false, message: '', type: 'info' },
 
       showNotification: false,
       notificationMessage: "",
@@ -163,7 +166,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   // Add these methods to your class
   toggleNotification = (isEntry: boolean, vehicleData?: { plateNumber: string; vehicleName: string }) => {
     let message: string;
-    
+
     if (isEntry) {
       message = "Are you the one entering the gate?";
     } else if (vehicleData) {
@@ -177,7 +180,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       isEntryNotification: isEntry,
       notificationMessage: message
     });
-    
+
     // Auto-hide after 30 seconds
     setTimeout(() => {
       if (this.state.showNotification) {
@@ -187,28 +190,28 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   }
 
   setNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-  this.setState({
-    notification: {
-      show: true,
-      message,
-      type
-    }
-  });
-  
-  // Auto-hide after 5 seconds
-  setTimeout(() => {
     this.setState({
       notification: {
-        ...this.state.notification,
-        show: false
+        show: true,
+        message,
+        type
       }
     });
-  }, 5000);
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      this.setState({
+        notification: {
+          ...this.state.notification,
+          show: false
+        }
+      });
+    }, 5000);
   };
 
   handleNotificationResponse = async (response: boolean) => {
     const { pendingExitConfirmation } = this.state;
-    
+
     if (response && pendingExitConfirmation) {
       // Send response via WebSocket
       const success = webSocketService.sendMessage({
@@ -224,16 +227,16 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
         this.setNotification("Failed to send response", 'error');
       }
     }
-    
+
     // Reset the notification state
-    this.setState({ 
+    this.setState({
       showNotification: false,
       pendingExitConfirmation: undefined
     });
   }
 
   isPlateNumberTaken = (plateNumber: string): boolean => {
-    return this.state.vehicles.some(v => 
+    return this.state.vehicles.some(v =>
       v.plateNumber.toLowerCase() === plateNumber.toLowerCase() ||
       v.plate_number?.toLowerCase() === plateNumber.toLowerCase()
     );
@@ -254,7 +257,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   private loadStateFromStorage = async () => {
     const { statePersistence } = await import('@/lib/utils');
     const savedState = statePersistence.loadState();
-    
+
     if (savedState.currentPage) {
       this.setState(prevState => ({
         ...prevState,
@@ -267,14 +270,14 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       }));
     }
   };
-    
+
   // Add this in componentDidMount to simulate notifications:
   componentDidMount() {
     const token = localStorage.getItem('authToken');
 
-      
-      this.loadStateFromStorage().then(() => {
-        if (token) {
+
+    this.loadStateFromStorage().then(() => {
+      if (token) {
         this.connectWebSocket(token);
       }
 
@@ -288,7 +291,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       if (this.state.currentUser) {
         this.fetchVehicles();
         this.fetchActivities();
-      } 
+      }
       window.addEventListener('popstate', this.handleBrowserNavigation);
     });
   }
@@ -310,14 +313,14 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
   componentDidUpdate(prevProps: {}, prevState: VehicleSecuritySystemState) {
     // Only fetch profile if user changed and we have a current user
-    if (this.state.currentUser && 
-        (!prevState.currentUser || 
+    if (this.state.currentUser &&
+      (!prevState.currentUser ||
         prevState.currentUser.id !== this.state.currentUser.id)) {
       this.fetchProfile();
     }
     if ((!prevState.currentUser && this.state.currentUser) ||
-        (prevState.currentPage !== 'activity-logs' && 
-          this.state.currentPage === 'activity-logs')) {
+      (prevState.currentPage !== 'activity-logs' &&
+        this.state.currentPage === 'activity-logs')) {
       this.fetchVehicles();
       this.fetchActivities();
     }
@@ -337,24 +340,25 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   private handleBrowserNavigation = (event: PopStateEvent) => {
     // This prevents the default back behavior and uses our state
     event.preventDefault();
-    
+
     // You can optionally implement your own navigation history
     // For now, we'll just maintain the current page from state
     console.log('Browser navigation attempted, maintaining current state');
   };
 
-
   handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    this.setState({ loading: true });
-    
+    this.setState({ loading: true, loginError: null }); // Reset loginError on new attempt
+
     try {
       const { user, token, error } = await authService.login({
         email: this.state.loginForm.email,
-        password: this.state.loginForm.password
+        password: this.state.loginForm.password,
       });
 
       if (error) {
+        console.log(error);
+        this.setState({ loginError: error }); // Set loginError for the form
         this.setNotification(error, 'error');
         return;
       }
@@ -370,26 +374,31 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
         localStorage.setItem('authToken', token);
 
         this.connectWebSocket(token);
-        
+
         // First set the user state
         await new Promise<void>((resolve) => {
-          this.setState({ 
-            currentUser: appUser,
-            currentPage: "dashboard"
-          }, () => {
-            this.saveStateToStorage(); // Save state after update
-            resolve();
-          });
+          this.setState(
+            {
+              currentUser: appUser,
+              currentPage: 'dashboard',
+              loginError: null, // Clear any previous error
+            },
+            () => {
+              this.saveStateToStorage(); // Save state after update
+              resolve();
+            }
+          );
         });
-      
-        
+
         // Then fetch vehicles
         await this.fetchVehicles();
-        
-        this.setNotification("Login successful!", 'success');
+
+        this.setNotification('Login successful!', 'success');
       }
     } catch (err) {
-      this.setNotification("An unexpected error occurred", 'error');
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      this.setState({ loginError: errorMessage }); // Set loginError for the form
+      this.setNotification(errorMessage, 'error');
     } finally {
       this.setState({ loading: false });
     }
@@ -401,7 +410,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       id: Date.now().toString(),
       name: this.state.registerForm.name,
       email: this.state.registerForm.email,
-      role:  "User",
+      role: "User",
     }
     this.setState({
       users: [...this.state.users, newUser],
@@ -461,7 +470,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       this.setNotification('This plate number is already registered', 'error');
       return;
     }
-    
+
     const token = localStorage.getItem('authToken');
     if (!token || !this.state.currentUser) {
       this.setNotification('Please login first', 'error');
@@ -486,7 +495,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
       console.log('API Response:', { vehicle, error }); // Debug log
 
-      
+
       if (error) {
         // Show the specific error message from the API
         this.setNotification(error, 'error');
@@ -532,15 +541,15 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
   handleLogout = () => {
     localStorage.removeItem('authToken');
-    
+
     // Use dynamic import to avoid circular dependencies
     import('@/lib/utils').then(({ statePersistence }) => {
       statePersistence.clearState();
-      
-      this.setState({ 
+
+      this.setState({
         currentUser: null,
         currentPage: "landing",
-        profileForm: { 
+        profileForm: {
           name: "",
           email: "",
           phone: "",
@@ -552,11 +561,11 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   handleExitConfirmation = (message: WebSocketMessage) => {
     if (message.type === 'exit_confirmation' && message.pending_id && message.token) {
       console.log('Processing exit confirmation:', message);
-      
+
       // Extract vehicle information from the message or use fallback
       const plateNumber = this.extractPlateNumberFromMessage(message.message) || 'Unknown';
       const vehicleName = this.getVehicleName(plateNumber) || 'Unknown Vehicle';
-      
+
       this.setState({
         pendingExitConfirmation: {
           pending_id: message.pending_id,
@@ -573,9 +582,9 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   }
 
   handlePageChange = (page: string) => {
-    this.setState({ 
+    this.setState({
       currentPage: page,
-      isMenuOpen: false 
+      isMenuOpen: false
     }, () => {
       this.saveStateToStorage(); // Save state after page change
     });
@@ -592,22 +601,22 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       }
 
       webSocketService.connect(token);
-      
+
       // Listen for connection status changes
       this.connectionUnsubscribe = webSocketService.onConnectionChange((connected) => {
         console.log('WebSocket connection status changed:', connected);
         this.setState({ webSocketConnected: connected });
       });
-      
+
       // Listen for messages
       this.messageUnsubscribe = webSocketService.onMessage((message) => {
         console.log('WebSocket message received:', message);
-        
+
         if (message.type === 'exit_confirmation') {
           this.handleExitConfirmation(message);
         }
       });
-      
+
     } catch (error) {
       console.error('WebSocket connection failed:', error);
     }
@@ -615,7 +624,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
   extractPlateNumberFromMessage = (message?: string): string | null => {
     if (!message) return null;
-    
+
     // Try to extract plate number from message (e.g., "Vehicle ABC-123 is exiting")
     const plateMatch = message.match(/[A-Z0-9-]{6,10}/);
     return plateMatch ? plateMatch[0] : null;
@@ -626,7 +635,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     if (!pendingExitConfirmation) return;
 
     const notificationMessage = `Are you the one exiting in ${pendingExitConfirmation.vehicleName} (${pendingExitConfirmation.plateNumber})?`;
-    
+
     this.setState({
       showNotification: true,
       notificationMessage: notificationMessage,
@@ -673,13 +682,13 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     if (!token || !this.state.currentUser) return;
 
     this.setState({ profileLoading: true });
-    
+
     try {
       const { profile, error } = await profileService.getProfile(
         token,
         this.state.currentUser.id
       );
-      
+
       if (error) throw new Error(error);
 
       if (profile) {
@@ -710,14 +719,14 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
     try {
       const { vehicles, error } = await vehicleService.getVehicles(token);
-      
+
       if (error) {
         this.setNotification(error, 'error');
         return;
       }
 
       if (vehicles) {
-        this.setState({ 
+        this.setState({
           vehicles: vehicles.map(v => ({
             ...v,
             plateNumber: v.plate_number || v.plateNumber || '',
@@ -743,7 +752,9 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
     try {
       const { vehicles, error: vehiclesError } = await vehicleService.getVehicles(token);
-      
+
+      console.log(vehicles)
+
       if (vehiclesError) {
         this.setNotification(vehiclesError, 'error');
         return;
@@ -751,20 +762,20 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
       if (vehicles && vehicles.length > 0) {
         const allActivities: VehicleActivity[] = [];
-        
+
         for (const vehicle of vehicles) {
           console.log(`Fetching activities for vehicle ID: ${vehicle.id}`);
-          
+
           const { activities, error: activitiesError } = await activityService.getVehicleActivities(
-            token, 
+            token,
             vehicle.id
           );
-          
+
           if (activitiesError) {
             console.error(`Error for vehicle ${vehicle.id}:`, activitiesError);
             continue;
           }
-          
+
           if (activities) {
             console.log(`Found ${activities.length} activities for vehicle ${vehicle.id}`);
             allActivities.push(...activities);
@@ -772,7 +783,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
         }
 
         // Sort activities by timestamp (newest first)
-        const sortedActivities = allActivities.sort((a, b) => 
+        const sortedActivities = allActivities.sort((a, b) =>
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         );
 
@@ -787,7 +798,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
         }));
 
         // Update the state with transformed logs
-        this.setState({ 
+        this.setState({
           activityLogs: transformedLogs
         });
 
@@ -806,8 +817,8 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
   checkForExitActivities = (activities: VehicleActivity[]) => {
     // Look for recent exit activities
-    const recentExits = activities.filter(activity => 
-      !activity.is_entry && 
+    const recentExits = activities.filter(activity =>
+      !activity.is_entry &&
       new Date(activity.timestamp).getTime() > Date.now() - 300000 // Last 5 minutes
     );
 
@@ -819,10 +830,10 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
           visitorType: latestExit.visitor_type,
         }
       });
-      
+
       // Show notification with vehicle info
-      this.toggleNotification(false, { 
-        plateNumber: latestExit.plate_number, 
+      this.toggleNotification(false, {
+        plateNumber: latestExit.plate_number,
         vehicleName: this.getVehicleName(latestExit.plate_number) || 'Unknown Vehicle'
       });
     }
@@ -831,16 +842,16 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
   // Helper method to get vehicle name from plate number
   getVehicleName = (plateNumber: string): string => {
-    const vehicle = this.state.vehicles.find(v => 
+    const vehicle = this.state.vehicles.find(v =>
       v.plateNumber === plateNumber || v.plate_number === plateNumber
     );
     return vehicle ? `${vehicle.model} (${vehicle.color})` : 'Unknown Vehicle';
   }
 
-  
+
   NavigationMenu = () => {
     const userVehicles = this.state.vehicles.filter((v) => v.userId === this.state.currentUser?.id)
-    
+
     return (
       <nav className="space-y-2">
         {this.state.currentUser?.role === "User" && (
@@ -925,7 +936,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
           //   this.setState({ currentPage: "profile", isMenuOpen: false }) // Changed to "profile"
           // }}
           onClick={() => this.handlePageChange("profile")}
-          >
+        >
           <User className="mr-2 h-4 w-4" />
           Profile
         </Button>
@@ -944,48 +955,54 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   renderLandingPage() {
     return (
       <LandingPage
-      onNavigateToRegister={() => this.setState({ currentPage: "register" })}
-      onNavigateToLogin={() => this.setState({ currentPage: "login" })}
-    />
+        onNavigateToRegister={() => this.setState({ currentPage: "register" })}
+        onNavigateToLogin={() => this.setState({ currentPage: "login" })}
+      />
     )
   }
 
   renderRegisterPage() {
-  return (
-    <RegisterForm
-      onSuccess={() => {
-        this.setNotification("Registration successful! Please login.", "success");
-        this.setState({ currentPage: "login" });
-      }}
-      onNavigateToLogin={() => this.setState({ currentPage: "login" })}
-      onNavigateToHome={() => this.setState({ currentPage: "landing" })}
-    />
-  );
+    return (
+      <RegisterForm
+        onSuccess={() => {
+          this.setNotification("Registration successful! Please login.", "success");
+          this.setState({ currentPage: "login" });
+        }}
+        onNavigateToLogin={() => this.setState({ currentPage: "login" })}
+        onNavigateToHome={() => this.setState({ currentPage: "landing" })}
+      />
+    );
   }
-
   renderLoginPage() {
     return (
       <LoginForm
         email={this.state.loginForm.email}
         password={this.state.loginForm.password}
-        loading={this.state.loading} // Add this
-        onEmailChange={(email) => this.setState({ 
-          loginForm: { ...this.state.loginForm, email } 
-        })}
-        onPasswordChange={(password) => this.setState({ 
-          loginForm: { ...this.state.loginForm, password } 
-        })}
+        loading={this.state.loading}
+        error={this.state.loginError} // Pass loginError to LoginForm
+        onEmailChange={(email) =>
+          this.setState({
+            loginForm: { ...this.state.loginForm, email },
+            loginError: null, // Clear error on input change
+          })
+        }
+        onPasswordChange={(password) =>
+          this.setState({
+            loginForm: { ...this.state.loginForm, password },
+            loginError: null, // Clear error on input change
+          })
+        }
         onSubmit={this.handleLogin}
-        onNavigateToRegister={() => this.setState({ currentPage: "register" })}
-        onNavigateToHome={() => this.setState({ currentPage: "landing" })}
+        onNavigateToRegister={() => this.setState({ currentPage: 'register', loginError: null })}
+        onNavigateToHome={() => this.setState({ currentPage: 'landing', loginError: null })}
       />
-    )
+    );
   }
 
   renderProfilePage() {
     if (!this.state.currentUser) return null;
 
-     return (
+    return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -998,8 +1015,8 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
                 )}
                 <h1 className="text-xl font-semibold">My Profile</h1>
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => this.handlePageChange("dashboard")}
               >
                 Back to Dashboard
@@ -1010,46 +1027,46 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
         <main className="max-w-2xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <ProfileContainer
-              currentUser={this.state.currentUser}
-              initialData={{
-                full_name: this.state.profileForm.name,
-                phone: this.state.profileForm.phone
-              }}
-              onSave={async (data) => {
-                this.setState({ profileLoading: true });
-                try {
-                  const token = localStorage.getItem('authToken');
-                  if (!token || !this.state.currentUser) throw new Error('Not authenticated');
-                  
-                  const { profile, error } = await profileService.updateProfile(
-                    token,
-                    this.state.currentUser.id,
-                    {
-                      full_name: data.full_name,
-                      phone: data.phone
-                    }
-                  );
+            currentUser={this.state.currentUser}
+            initialData={{
+              full_name: this.state.profileForm.name,
+              phone: this.state.profileForm.phone
+            }}
+            onSave={async (data) => {
+              this.setState({ profileLoading: true });
+              try {
+                const token = localStorage.getItem('authToken');
+                if (!token || !this.state.currentUser) throw new Error('Not authenticated');
 
-                  if (error) throw new Error(error);
-                  
-                  this.setState({
-                    profileForm: {
-                      ...this.state.profileForm,
-                      name: profile?.full_name || data.full_name,
-                      phone: profile?.phone || data.phone
-                    }
-                  });
-                  
-                  this.setNotification("Profile updated successfully!", 'success');
-                } catch (err) {
-                  const errorMessage = err instanceof Error ? err.message : 'Profile update failed';
-                  this.setNotification(errorMessage, 'error');
-                } finally {
-                  this.setState({ profileLoading: false });
-                }
-              }}
-              loading={this.state.profileLoading}
-            />
+                const { profile, error } = await profileService.updateProfile(
+                  token,
+                  this.state.currentUser.id,
+                  {
+                    full_name: data.full_name,
+                    phone: data.phone
+                  }
+                );
+
+                if (error) throw new Error(error);
+
+                this.setState({
+                  profileForm: {
+                    ...this.state.profileForm,
+                    name: profile?.full_name || data.full_name,
+                    phone: profile?.phone || data.phone
+                  }
+                });
+
+                this.setNotification("Profile updated successfully!", 'success');
+              } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : 'Profile update failed';
+                this.setNotification(errorMessage, 'error');
+              } finally {
+                this.setState({ profileLoading: false });
+              }
+            }}
+            loading={this.state.profileLoading}
+          />
         </main>
       </div>
     );
@@ -1075,8 +1092,8 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
                 )}
                 <h1 className="text-xl font-semibold">My Profile</h1>
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => this.handlePageChange("dashboard")}
               >
                 Back to Dashboard
@@ -1093,7 +1110,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
             </aside>
 
             <main className="flex-1">
-                {this.state.loading ? (
+              {this.state.loading ? (
                 <div className="flex justify-center items-center h-64">
                   <p>Loading vehicles...</p>
                 </div>
@@ -1102,7 +1119,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
                   vehicles={this.state.vehicles.filter(v => v.userId === this.state.currentUser?.id)}
                   onEdit={this.handleEditVehicle}
                   onDelete={this.deleteVehicle} // Now async
-                  onRegisterNew={() => this.setState({ 
+                  onRegisterNew={() => this.setState({
                     currentPage: "vehicle-registration",
                     vehicleForm: {
                       plateNumber: "",
@@ -1121,7 +1138,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     );
   }
 
- // Alternative: Use the same header style as Profile and Registered Vehicles
+  // Alternative: Use the same header style as Profile and Registered Vehicles
   renderActivityLogsPage() {
     if (!this.state.currentUser) {
       return (
@@ -1150,8 +1167,8 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
                   {this.state.currentUser.role === "Security" ? "Activity Monitor" : "Activity Logs"}
                 </h1>
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => this.handlePageChange("dashboard")}
               >
                 Back to Dashboard
@@ -1183,7 +1200,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
                   logs={this.state.activityLogs} // This should now have the fetched data
                   userRole={this.state.currentUser.role}
                   onNavigateToVehicle={(plate) => {
-                    this.setState({ 
+                    this.setState({
                       currentPage: "registered-vehicles",
                     });
                   }}
@@ -1209,13 +1226,13 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
             {this.state.notificationMessage}
           </h3>
           <div className="flex justify-center space-x-4">
-            <Button 
+            <Button
               onClick={() => this.handleNotificationResponse(true)}
               className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
             >
               Yes
             </Button>
-            <Button 
+            <Button
               onClick={() => this.handleNotificationResponse(false)}
               variant="outline"
               className="px-6 py-2 border-red-600 text-red-600 hover:bg-red-50"
@@ -1232,17 +1249,17 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     return (
       <VehicleRegistration
         formData={this.state.vehicleForm}
-        onPlateNumberChange={(plateNumber) => 
-          this.setState({ vehicleForm: {...this.state.vehicleForm, plateNumber} })
+        onPlateNumberChange={(plateNumber) =>
+          this.setState({ vehicleForm: { ...this.state.vehicleForm, plateNumber } })
         }
-        onModelChange={(model) => 
-          this.setState({ vehicleForm: {...this.state.vehicleForm, model} })
+        onModelChange={(model) =>
+          this.setState({ vehicleForm: { ...this.state.vehicleForm, model } })
         }
-        onColorChange={(color) => 
-          this.setState({ vehicleForm: {...this.state.vehicleForm, color} })
+        onColorChange={(color) =>
+          this.setState({ vehicleForm: { ...this.state.vehicleForm, color } })
         }
-        onTypeChange={(type) => 
-          this.setState({ vehicleForm: {...this.state.vehicleForm, type} })
+        onTypeChange={(type) =>
+          this.setState({ vehicleForm: { ...this.state.vehicleForm, type } })
         }
         onSubmit={this.handleVehicleRegistration}
         onCancel={() => this.handlePageChange("dashboard")}
@@ -1315,16 +1332,16 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
             </aside>
 
             {/* Main Content */}
-          <main className="flex-1">
-            <DashboardMain
-              userRole={this.state.currentUser?.role || "User"}
-              userVehiclesCount={userVehicles.length}
-              activeSessionsCount={this.state.activityLogs.filter(log => log.logType === 'Entry').length}
-              totalVehiclesCount={this.state.vehicles.length}
-              recentActivities={recentActivities} // Pass the recent activities
-              onNavigate={(page) => this.handlePageChange(page)}
-            />
-          </main>
+            <main className="flex-1">
+              <DashboardMain
+                userRole={this.state.currentUser?.role || "User"}
+                userVehiclesCount={userVehicles.length}
+                activeSessionsCount={this.state.activityLogs.filter(log => log.logType === 'Entry').length}
+                totalVehiclesCount={this.state.vehicles.length}
+                recentActivities={recentActivities} // Pass the recent activities
+                onNavigate={(page) => this.handlePageChange(page)}
+              />
+            </main>
           </div>
         </div>
         {this.renderNotification()}
@@ -1332,58 +1349,19 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     )
   }
 
-  // renderWebSocketStatus() {
-  //   return (
-  //     <div className={`fixed top-4 right-4 px-3 py-1 rounded-full text-xs font-medium ${
-  //       this.state.webSocketConnected 
-  //         ? 'bg-green-100 text-green-800' 
-  //         : 'bg-red-100 text-red-800'
-  //     }`}>
-  //       {this.state.webSocketConnected ? '🟢 Connected' : '🔴 Disconnected'}
-  //     </div>
-  //   );
-  // }
-
-  // testWebSocketMessage = () => {
-  //   const testMessage: WebSocketMessage = {
-  //     type: 'exit_confirmation',
-  //     pending_id: 'test-pending-123',
-  //     token: 'test-token-456',
-  //     message: 'Vehicle ABC-123 is exiting the premises. Are you the driver?'
-  //   };
-    
-  //   this.handleExitConfirmation(testMessage);
-  // }
-
-  // // Add a test button in your render method for development
-  // renderTestButton() {
-  //   if (process.env.NODE_ENV === 'development') {
-  //     return (
-  //       <button
-  //         onClick={this.testWebSocketMessage}
-  //         className="fixed top-20 right-4 bg-blue-500 text-white px-3 py-1 rounded text-sm"
-  //       >
-  //         Test WebSocket
-  //       </button>
-  //     );
-  //   }
-  //   return null;
-  // }
-
-
 
 
   render() {
-      const currentPage = this.renderCurrentPage();
-  
-  return (
+    const currentPage = this.renderCurrentPage();
+
+    return (
       <>
         {currentPage}
         {this.state.showNotification && (
           <Notification
             message={this.state.notificationMessage}
             type="info"
-            onClose={() => this.setState({ 
+            onClose={() => this.setState({
               showNotification: false,
               pendingExitConfirmation: undefined
             })}
