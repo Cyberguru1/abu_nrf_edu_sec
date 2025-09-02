@@ -406,10 +406,6 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   handleVehicleRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     // Client-side duplicate check
-    if (this.isPlateNumberTaken(this.state.vehicleForm.plateNumber)) {
-      this.setNotification('This plate number is already registered', 'error');
-      return;
-    }
     
     const token = localStorage.getItem('authToken');
     if (!token || !this.state.currentUser) {
