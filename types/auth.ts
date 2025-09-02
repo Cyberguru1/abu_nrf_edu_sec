@@ -74,6 +74,7 @@ export interface VehicleActivity {
   vehicle_id?: string;
   user_id?: string;
   is_entry: boolean;
+  gate_name: string;
   vehicle_type: 'bus' | 'car' | 'bike';
   entry_point_id?: string;
   exit_point_id?: string;

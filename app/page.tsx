@@ -95,6 +95,7 @@ type ActivityLog = {
   logType: 'Entry' | 'Exit' // New field to indicate type
   timestamp?: string // Optional for API compatibility
   is_entry?: boolean // Optional for API compatibility
+  gate_name: string
 }
 
 type VehicleSecuritySystemState = {
@@ -208,57 +209,57 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   };
 
   handleNotificationResponse = async (response: boolean) => {
-  const { pendingExitConfirmation } = this.state;
-  
-  if (pendingExitConfirmation) {
-    console.log('Sending WebSocket response:', {
-      pending_id: pendingExitConfirmation.pending_id,
-      token: pendingExitConfirmation.token,
-      confirmed: response
-    });
+    const { pendingExitConfirmation } = this.state;
 
-    // Send response via WebSocket - match exact backend structure
-    const success = webSocketService.sendMessage({
-      type: 'response',
-      pending_id: pendingExitConfirmation.pending_id,
-      token: pendingExitConfirmation.token,
-      confirmed: response
-    });
+    if (pendingExitConfirmation) {
+      console.log('Sending WebSocket response:', {
+        pending_id: pendingExitConfirmation.pending_id,
+        token: pendingExitConfirmation.token,
+        confirmed: response
+      });
 
-    if (success) {
-      this.setNotification(
-        response ? "Exit confirmed successfully" : "Exit denied - Security has been notified", 
-        response ? 'success' : 'info'
-      );
-      
-      // Log the action for debugging
-      console.log(`User ${response ? 'confirmed' : 'denied'} exit for vehicle ${pendingExitConfirmation.plateNumber}`);
-      
-      // If denied, show additional message
-      if (!response) {
-        setTimeout(() => {
-          this.setNotification("Security personnel have been alerted about the unauthorized exit attempt", 'info');
-        }, 2000);
-      }
-    } else {
-      this.setNotification("Failed to send response - connection issue", 'error');
-      
-      // Try to reconnect if sending failed
-      const authToken = localStorage.getItem('authToken');
-      if (authToken) {
-        console.log('Attempting to reconnect WebSocket...');
-        webSocketService.reconnect();
+      // Send response via WebSocket - match exact backend structure
+      const success = webSocketService.sendMessage({
+        type: 'response',
+        pending_id: pendingExitConfirmation.pending_id,
+        token: pendingExitConfirmation.token,
+        confirmed: response
+      });
+
+      if (success) {
+        this.setNotification(
+          response ? "Exit confirmed successfully" : "Exit denied - Security has been notified",
+          response ? 'success' : 'info'
+        );
+
+        // Log the action for debugging
+        console.log(`User ${response ? 'confirmed' : 'denied'} exit for vehicle ${pendingExitConfirmation.plateNumber}`);
+
+        // If denied, show additional message
+        if (!response) {
+          setTimeout(() => {
+            this.setNotification("Security personnel have been alerted about the unauthorized exit attempt", 'info');
+          }, 2000);
+        }
+      } else {
+        this.setNotification("Failed to send response - connection issue", 'error');
+
+        // Try to reconnect if sending failed
+        const authToken = localStorage.getItem('authToken');
+        if (authToken) {
+          console.log('Attempting to reconnect WebSocket...');
+          webSocketService.reconnect();
+        }
       }
     }
+
+    // Reset the notification state
+    this.setState({
+      showNotification: false,
+      pendingExitConfirmation: undefined
+    });
   }
-  
-  // Reset the notification state
-  this.setState({ 
-    showNotification: false,
-    pendingExitConfirmation: undefined
-  });
-}
-  
+
   // Add this in componentDidMount to simulate notifications:
   componentDidMount() {
     const token = localStorage.getItem('authToken');
@@ -269,7 +270,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     if (this.state.currentUser) {
       this.fetchVehicles();
       this.fetchActivities();
-    } 
+    }
   }
 
   componentWillUnmount() {
@@ -332,12 +333,12 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
         // First set the user state
         await new Promise<void>((resolve) => {
-          this.setState({ 
+          this.setState({
             currentUser: appUser,
             currentPage: "dashboard"
           }, resolve); // Using callback to ensure state is updated
         });
-        
+
         // Then fetch vehicles
         await this.fetchVehicles();
 
@@ -412,7 +413,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   handleVehicleRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     // Client-side duplicate check
-    
+
     const token = localStorage.getItem('authToken');
     if (!token || !this.state.currentUser) {
       this.setNotification('Please login first', 'error');
@@ -483,7 +484,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
   handleLogout = () => {
     localStorage.removeItem('authToken');
-    this.setState({ 
+    this.setState({
       currentUser: null,
       currentPage: "landing",
       profileForm: {  // Reset profile form
@@ -497,14 +498,14 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   handleExitConfirmation = (message: WebSocketMessage) => {
     if (message.type === 'exit_confirmation' && message.pending_id && message.token) {
       console.log('Processing exit confirmation:', message)
-      
+
       this.setState({
         pendingExitConfirmation: {
           pending_id: message.pending_id,
           token: message.token,
           message: message.message || 'Are you the one exiting the premises?',
-          plateNumber: message.plateNumber || 'Unknown', 
-          vehicleName: message.vehicleName || 'Unknown Vehicle' 
+          plateNumber: message.plateNumber || 'Unknown',
+          vehicleName: message.vehicleName || 'Unknown Vehicle'
         }
       }, () => {
         this.showWebSocketNotification()
@@ -513,46 +514,46 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   }
 
   connectWebSocket = (token: string) => {
-  try {
-    // Clean up any existing subscriptions first
-    if (this.connectionUnsubscribe) {
-      this.connectionUnsubscribe();
-      this.connectionUnsubscribe = undefined;
-    }
-    if (this.messageUnsubscribe) {
-      this.messageUnsubscribe();
-      this.messageUnsubscribe = undefined;
-    }
+    try {
+      // Clean up any existing subscriptions first
+      if (this.connectionUnsubscribe) {
+        this.connectionUnsubscribe();
+        this.connectionUnsubscribe = undefined;
+      }
+      if (this.messageUnsubscribe) {
+        this.messageUnsubscribe();
+        this.messageUnsubscribe = undefined;
+      }
 
-    console.log('Connecting WebSocket with token...');
-    webSocketService.connect(token);
-    
-    this.connectionUnsubscribe = webSocketService.onConnectionChange((connected) => {
-      console.log('WebSocket connection status changed:', connected);
-      this.setState({ webSocketConnected: connected });
-      
-      if (!connected && this.state.currentUser) {
-        console.log('WebSocket disconnected, will retry in 5 seconds...');
-      }
-    });
-    
-    this.messageUnsubscribe = webSocketService.onMessage((message) => {
-      console.log('WebSocket message received in component:', message);
-      
-      if (message.type === 'exit_confirmation') {
-        this.handleExitConfirmation(message);
-      }
-      
-      if (message.type === 'security_alert') {
-        this.setNotification(message.message || 'Security alert received', 'info');
-      }
-    });
-    
-  } catch (error) {
-    console.error('WebSocket connection failed:', error);
-    this.setNotification('Connection failed, retrying...', 'error');
+      console.log('Connecting WebSocket with token...');
+      webSocketService.connect(token);
+
+      this.connectionUnsubscribe = webSocketService.onConnectionChange((connected) => {
+        console.log('WebSocket connection status changed:', connected);
+        this.setState({ webSocketConnected: connected });
+
+        if (!connected && this.state.currentUser) {
+          console.log('WebSocket disconnected, will retry in 5 seconds...');
+        }
+      });
+
+      this.messageUnsubscribe = webSocketService.onMessage((message) => {
+        console.log('WebSocket message received in component:', message);
+
+        if (message.type === 'exit_confirmation') {
+          this.handleExitConfirmation(message);
+        }
+
+        if (message.type === 'security_alert') {
+          this.setNotification(message.message || 'Security alert received', 'info');
+        }
+      });
+
+    } catch (error) {
+      console.error('WebSocket connection failed:', error);
+      this.setNotification('Connection failed, retrying...', 'error');
+    }
   }
-}
 
   extractPlateNumberFromMessage = (message?: string): string | null => {
     if (!message) return null;
@@ -563,14 +564,14 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   }
 
   showWebSocketNotification = () => {
-      const { pendingExitConfirmation } = this.state
-      if (!pendingExitConfirmation) return
+    const { pendingExitConfirmation } = this.state
+    if (!pendingExitConfirmation) return
 
-      this.setState({
-        showNotification: true,
-        notificationMessage: pendingExitConfirmation.message,
-        isEntryNotification: false
-      })
+    this.setState({
+      showNotification: true,
+      notificationMessage: pendingExitConfirmation.message,
+      isEntryNotification: false
+    })
   }
 
   deleteVehicle = async (vehicleId: string) => {
@@ -672,77 +673,85 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       this.setState({ loading: false });
     }
   };
-
-  fetchActivities = async () => {
+  async fetchActivities() {
     const token = localStorage.getItem('authToken');
-    if (!token || !this.state.currentUser) return;
+    if (!token || !this.state.currentUser) {
+      this.setNotification('Please login first', 'error');
+      return;
+    }
 
     this.setState({ loading: true });
 
     try {
       const { vehicles, error: vehiclesError } = await vehicleService.getVehicles(token);
 
-      console.log(vehicles)
-
       if (vehiclesError) {
         this.setNotification(vehiclesError, 'error');
         return;
       }
 
-      if (vehicles && vehicles.length > 0) {
-        const allActivities: VehicleActivity[] = [];
+      if (!vehicles || vehicles.length === 0) {
+        this.setState({
+          activityLogs: [],
+          loading: false,
+        });
+        this.setNotification('No vehicles found', 'info');
+        return;
+      }
 
-        for (const vehicle of vehicles) {
-          console.log(`Fetching activities for vehicle ID: ${vehicle.id}`);
+      const allActivities: VehicleActivity[] = [];
 
-          const { activities, error: activitiesError } = await activityService.getVehicleActivities(
-            token,
-            vehicle.id
-          );
+      for (const vehicle of vehicles) {
+        console.log(`Fetching activities for vehicle ID: ${vehicle.id}`);
 
-          if (activitiesError) {
-            console.error(`Error for vehicle ${vehicle.id}:`, activitiesError);
-            continue;
-          }
-
-          if (activities) {
-            console.log(`Found ${activities.length} activities for vehicle ${vehicle.id}`);
-            allActivities.push(...activities);
-          }
-        }
-
-        // Sort activities by timestamp (newest first)
-        const sortedActivities = allActivities.sort((a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        const { activities, error: activitiesError } = await activityService.getVehicleActivities(
+          token,
+          vehicle.id
         );
 
-        // Transform API data to match our UI format
-        const transformedLogs: ActivityLog[] = sortedActivities.map(activity => ({
-          id: activity.id,
-          vehiclePlate: activity.plate_number,
-          vehicleName: this.getVehicleName(activity.plate_number) || 'Unknown Vehicle',
-          logTime: activity.timestamp,
-          logType: activity.is_entry ? 'Entry' as const : 'Exit' as const,
-          rawActivity: activity
-        }));
+        if (activitiesError) {
+          console.error(`Error for vehicle ${vehicle.id}:`, activitiesError);
+          this.setNotification(`Failed to fetch activities for vehicle ${vehicle.plate_number || vehicle.id}: ${activitiesError}`, 'error');
+          continue;
+        }
 
-        // Update the state with transformed logs
-        this.setState({
-          activityLogs: transformedLogs
-        });
-
-        // Check for exits that need confirmation
-        this.checkForExitActivities(sortedActivities);
+        if (activities && activities.length > 0) {
+          console.log(`Found ${activities.length} activities for vehicle ${vehicle.id}`);
+          allActivities.push(...activities);
+        }
       }
+
+      // Sort activities by timestamp (newest first)
+      const sortedActivities = allActivities.sort((a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      // Transform API data to match UI format
+      const transformedLogs: ActivityLog[] = sortedActivities.map((activity) => ({
+        id: activity.id,
+        vehiclePlate: activity.plate_number,
+        vehicleName: this.getVehicleName(activity.plate_number) || 'Unknown Vehicle',
+        logTime: activity.timestamp,
+        logType: activity.is_entry ? ('Entry' as const) : ('Exit' as const),
+        rawActivity: activity,
+        gate_name: activity.gate_name,
+      }));
+
+      // Update state with transformed logs
+      this.setState({
+        activityLogs: transformedLogs,
+        loading: false,
+      });
+
+      // Check for exits that need confirmation
+      this.checkForExitActivities(sortedActivities);
     } catch (err) {
       console.error('Fetch activities error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to load activities';
       this.setNotification(errorMessage, 'error');
-    } finally {
       this.setState({ loading: false });
     }
   }
-
 
   checkForExitActivities = (activities: VehicleActivity[]) => {
     // Look for recent exit activities
@@ -857,7 +866,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
           onClick={() => {
             this.setState({ currentPage: "profile", isMenuOpen: false }) // Changed to "profile"
           }}
-          >
+        >
           <User className="mr-2 h-4 w-4" />
           Profile
         </Button>
@@ -936,8 +945,8 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
                 )}
                 <h1 className="text-xl font-semibold">My Profile</h1>
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => this.setState({ currentPage: "dashboard" })}
               >
                 Back to Dashboard
@@ -1013,8 +1022,8 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
                 )}
                 <h1 className="text-xl font-semibold">My Profile</h1>
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => this.setState({ currentPage: "dashboard" })}
               >
                 Back to Dashboard
@@ -1088,8 +1097,8 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
                   {this.state.currentUser.role === "Security" ? "Activity Monitor" : "Activity Logs"}
                 </h1>
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => this.setState({ currentPage: "dashboard" })}
               >
                 Back to Dashboard
@@ -1253,16 +1262,16 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
             </aside>
 
             {/* Main Content */}
-          <main className="flex-1">
-            <DashboardMain
-              userRole={this.state.currentUser?.role || "User"}
-              userVehiclesCount={userVehicles.length}
-              activeSessionsCount={this.state.activityLogs.filter(log => log.logType === 'Entry').length}
-              totalVehiclesCount={this.state.vehicles.length}
-              recentActivities={recentActivities} // Pass the recent activities
-              onNavigate={(page) => this.setState({ currentPage: page })}
-            />
-          </main>
+            <main className="flex-1">
+              <DashboardMain
+                userRole={this.state.currentUser?.role || "User"}
+                userVehiclesCount={userVehicles.length}
+                activeSessionsCount={this.state.activityLogs.filter(log => log.logType === 'Entry').length}
+                totalVehiclesCount={this.state.vehicles.length}
+                recentActivities={recentActivities} // Pass the recent activities
+                onNavigate={(page) => this.setState({ currentPage: page })}
+              />
+            </main>
           </div>
         </div>
         {this.renderNotification()}
@@ -1272,11 +1281,10 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
   renderWebSocketStatus() {
     return (
-      <div className={`fixed top-4 right-4 px-3 py-1 rounded-full text-xs font-medium ${
-        this.state.webSocketConnected 
-          ? 'bg-green-100 text-green-800' 
+      <div className={`fixed top-4 right-4 px-3 py-1 rounded-full text-xs font-medium ${this.state.webSocketConnected
+          ? 'bg-green-100 text-green-800'
           : 'bg-red-100 text-red-800'
-      }`}>
+        }`}>
         {this.state.webSocketConnected ? '🟢 Connected' : '🔴 Disconnected'}
       </div>
     );
@@ -1289,7 +1297,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       token: 'test-token-456',
       message: 'Vehicle ABC-123 is exiting the premises. Are you the driver?'
     };
-    
+
     this.handleExitConfirmation(testMessage);
   }
 

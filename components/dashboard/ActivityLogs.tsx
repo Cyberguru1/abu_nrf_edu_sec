@@ -11,6 +11,7 @@ interface ActivityLog {
   logTime: string;
   logType: 'Entry' | 'Exit';
   rawActivity?: any; // Optional for API data
+  gate_name: string;
 }
 
 interface ActivityLogsProps {
@@ -56,6 +57,7 @@ export const ActivityLogs = ({ logs, userRole, onNavigateToVehicle }: ActivityLo
               <TableHead>Plate Number</TableHead>
               <TableHead>Logs Time</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Gate Name</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -90,6 +92,12 @@ export const ActivityLogs = ({ logs, userRole, onNavigateToVehicle }: ActivityLo
                       {getLogTypeIcon(log.logType)}
                       {log.logType}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                      {log.gate_name}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

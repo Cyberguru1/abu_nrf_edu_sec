@@ -9,6 +9,7 @@ interface ActivityLog {
   vehicleName: string;
   logTime: string;
   logType: 'Entry' | 'Exit';
+  gate_name: string;
 }
 
 interface DashboardMainProps {
@@ -17,7 +18,7 @@ interface DashboardMainProps {
   activeSessionsCount: number;
   totalVehiclesCount?: number;
   userStation?: string;
-  recentActivities?: ActivityLog[]; 
+  recentActivities?: ActivityLog[];
   onNavigate: (page: string) => void;
 }
 
@@ -42,7 +43,7 @@ export const DashboardMain = ({
   const getLogTypeVariant = (logType: 'Entry' | 'Exit') => {
     return logType === 'Entry' ? 'default' : 'secondary';
   };
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -51,8 +52,8 @@ export const DashboardMain = ({
           {userRole === "Security" ? "Security Dashboard" : "Dashboard"}
         </h2>
         <p className="text-gray-600">
-          {userRole === "Security" 
-            ? "Monitor all vehicle activities" 
+          {userRole === "Security"
+            ? "Monitor all vehicle activities"
             : "Manage your registered vehicles and access"}
         </p>
       </div>
@@ -62,7 +63,7 @@ export const DashboardMain = ({
         {/* User-specific cards */}
         {userRole === "User" && (
           <>
-            <Card 
+            <Card
               className="hover:shadow-md transition-shadow cursor-pointer"
               onClick={() => onNavigate("registered-vehicles")}
             >
@@ -170,14 +171,14 @@ export const DashboardMain = ({
             <CardTitle className="text-lg">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2">
-            <button 
+            <button
               onClick={() => onNavigate("vehicle-registration")}
               className="flex items-center gap-2 p-3 rounded-lg hover:bg-gray-100 transition-colors text-left"
             >
               <Plus className="h-5 w-5 text-blue-600" />
               <span>Register New Vehicle</span>
             </button>
-            <button 
+            <button
               onClick={() => onNavigate("registered-vehicles")}
               className="flex items-center gap-2 p-3 rounded-lg hover:bg-gray-100 transition-colors text-left"
             >
@@ -193,8 +194,8 @@ export const DashboardMain = ({
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
           <CardDescription>
-            {userRole === "Security" 
-              ? "Latest vehicle movements across campus" 
+            {userRole === "Security"
+              ? "Latest vehicle movements across campus"
               : "Your recent access history"}
           </CardDescription>
         </CardHeader>
@@ -204,9 +205,8 @@ export const DashboardMain = ({
               {recentActivities.slice(0, 3).map((activity) => (
                 <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-full ${
-                      activity.logType === 'Entry' ? 'bg-green-100' : 'bg-gray-100'
-                    }`}>
+                    <div className={`p-2 rounded-full ${activity.logType === 'Entry' ? 'bg-green-100' : 'bg-gray-100'
+                      }`}>
                       {activity.logType === 'Entry' ? (
                         <LogIn className="h-4 w-4 text-green-600" />
                       ) : (
@@ -222,9 +222,12 @@ export const DashboardMain = ({
                     <p className="text-xs font-medium">
                       {formatDateTime(activity.logTime)}
                     </p>
-                    <Badge 
-                      variant={getLogTypeVariant(activity.logType)} 
-                      className="text-xs mt-1"
+                    <Badge variant="outline" className="text-xs mt-1">
+                      {activity.gate_name}
+                    </Badge>
+                    <Badge
+                      variant={getLogTypeVariant(activity.logType)}
+                      className="text-xs mt-0"
                     >
                       {getLogTypeIcon(activity.logType)}
                       {activity.logType}
@@ -238,9 +241,9 @@ export const DashboardMain = ({
               <p>No recent activity found</p>
             </div>
           )}
-          
+
           <div className="mt-4 text-center">
-            <button 
+            <button
               onClick={() => onNavigate("activity-logs")}
               className="text-blue-600 hover:text-blue-800 text-sm font-medium"
             >
