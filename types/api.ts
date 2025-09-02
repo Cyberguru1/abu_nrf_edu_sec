@@ -1,4 +1,5 @@
-import { env } from "@/config/config";
+import { env } from '../config/config';
+
 
 export interface ApiError {
   message: string;
@@ -11,6 +12,7 @@ export interface ApiResponse<T> {
   error?: ApiError;
 }
 
+const API_BASE_URL = env.API_BASE_URL;
 
 // /lib/api.ts
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
@@ -22,7 +24,7 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
       'Accept': 'application/json',
       ...options.headers
     },
-    credentials: 'include' // If using cookies
+    credentials: 'include' 
   });
 
   if (!response.ok) {

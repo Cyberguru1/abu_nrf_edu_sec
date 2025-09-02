@@ -3,6 +3,7 @@ import { env } from '@/config/config';
 import { VehicleActivity } from '@/types/auth';
 
 
+const API_BASE_URL = env.API_BASE_URL;
 
 export const activityService = {
   async getVehicleActivities(

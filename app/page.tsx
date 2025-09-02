@@ -161,8 +161,6 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     }
   }
 
-
-
   // Add these methods to your class
   toggleNotification = (isEntry: boolean, vehicleData?: { plateNumber: string; vehicleName: string }) => {
     let message: string;
@@ -210,95 +208,71 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   };
 
   handleNotificationResponse = async (response: boolean) => {
-    const { pendingExitConfirmation } = this.state;
+  const { pendingExitConfirmation } = this.state;
+  
+  if (pendingExitConfirmation) {
+    console.log('Sending WebSocket response:', {
+      pending_id: pendingExitConfirmation.pending_id,
+      token: pendingExitConfirmation.token,
+      confirmed: response
+    });
 
-    if (response && pendingExitConfirmation) {
-      // Send response via WebSocket
-      const success = webSocketService.sendMessage({
-        type: 'response',
-        pending_id: pendingExitConfirmation.pending_id,
-        token: pendingExitConfirmation.token,
-        confirmed: response
-      });
+    // Send response via WebSocket - match exact backend structure
+    const success = webSocketService.sendMessage({
+      type: 'response',
+      pending_id: pendingExitConfirmation.pending_id,
+      token: pendingExitConfirmation.token,
+      confirmed: response
+    });
 
-      if (success) {
-        this.setNotification("Response sent successfully", 'success');
-      } else {
-        this.setNotification("Failed to send response", 'error');
+    if (success) {
+      this.setNotification(
+        response ? "Exit confirmed successfully" : "Exit denied - Security has been notified", 
+        response ? 'success' : 'info'
+      );
+      
+      // Log the action for debugging
+      console.log(`User ${response ? 'confirmed' : 'denied'} exit for vehicle ${pendingExitConfirmation.plateNumber}`);
+      
+      // If denied, show additional message
+      if (!response) {
+        setTimeout(() => {
+          this.setNotification("Security personnel have been alerted about the unauthorized exit attempt", 'info');
+        }, 2000);
+      }
+    } else {
+      this.setNotification("Failed to send response - connection issue", 'error');
+      
+      // Try to reconnect if sending failed
+      const authToken = localStorage.getItem('authToken');
+      if (authToken) {
+        console.log('Attempting to reconnect WebSocket...');
+        webSocketService.reconnect();
       }
     }
-
-    // Reset the notification state
-    this.setState({
-      showNotification: false,
-      pendingExitConfirmation: undefined
-    });
   }
-
-  isPlateNumberTaken = (plateNumber: string): boolean => {
-    return this.state.vehicles.some(v =>
-      v.plateNumber.toLowerCase() === plateNumber.toLowerCase() ||
-      v.plate_number?.toLowerCase() === plateNumber.toLowerCase()
-    );
-  };
-
-  private saveStateToStorage = async () => {
-    const { statePersistence } = await import('@/lib/utils');
-    statePersistence.saveState({
-      currentPage: this.state.currentPage,
-      currentUser: this.state.currentUser,
-      loginForm: this.state.loginForm,
-      registerForm: this.state.registerForm,
-      profileForm: this.state.profileForm,
-      vehicleForm: this.state.vehicleForm,
-    });
-  };
-
-  private loadStateFromStorage = async () => {
-    const { statePersistence } = await import('@/lib/utils');
-    const savedState = statePersistence.loadState();
-
-    if (savedState.currentPage) {
-      this.setState(prevState => ({
-        ...prevState,
-        currentPage: savedState.currentPage || 'landing',
-        currentUser: savedState.currentUser || null,
-        loginForm: savedState.loginForm || prevState.loginForm,
-        registerForm: savedState.registerForm || prevState.registerForm,
-        profileForm: savedState.profileForm || prevState.profileForm,
-        vehicleForm: savedState.vehicleForm || prevState.vehicleForm,
-      }));
-    }
-  };
-
+  
+  // Reset the notification state
+  this.setState({ 
+    showNotification: false,
+    pendingExitConfirmation: undefined
+  });
+}
+  
   // Add this in componentDidMount to simulate notifications:
   componentDidMount() {
     const token = localStorage.getItem('authToken');
+    if (token) {
+      this.connectWebSocket(token);
+    }
 
-
-    this.loadStateFromStorage().then(() => {
-      if (token) {
-        this.connectWebSocket(token);
-      }
-
-      if (token && !this.state.currentUser) {
-        this.reconnectUserSession(token);
-      } else if (token && this.state.currentUser) {
-        this.connectWebSocket(token);
-      }
-
-
-      if (this.state.currentUser) {
-        this.fetchVehicles();
-        this.fetchActivities();
-      }
-      window.addEventListener('popstate', this.handleBrowserNavigation);
-    });
+    if (this.state.currentUser) {
+      this.fetchVehicles();
+      this.fetchActivities();
+    } 
   }
 
   componentWillUnmount() {
-    window.removeEventListener('popstate', this.handleBrowserNavigation);
-
     // Clean up WebSocket subscriptions properly
     if (this.connectionUnsubscribe) {
       this.connectionUnsubscribe();
@@ -326,25 +300,6 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     }
   }
 
-  private reconnectUserSession = async (token: string) => {
-    try {
-      this.connectWebSocket(token);
-    } catch (error) {
-      console.error('Failed to reconnect user session:', error);
-      localStorage.removeItem('authToken');
-      const { statePersistence } = await import('@/lib/utils');
-      statePersistence.clearState();
-    }
-  };
-
-  private handleBrowserNavigation = (event: PopStateEvent) => {
-    // This prevents the default back behavior and uses our state
-    event.preventDefault();
-
-    // You can optionally implement your own navigation history
-    // For now, we'll just maintain the current page from state
-    console.log('Browser navigation attempted, maintaining current state');
-  };
 
   handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -377,19 +332,12 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
         // First set the user state
         await new Promise<void>((resolve) => {
-          this.setState(
-            {
-              currentUser: appUser,
-              currentPage: 'dashboard',
-              loginError: null, // Clear any previous error
-            },
-            () => {
-              this.saveStateToStorage(); // Save state after update
-              resolve();
-            }
-          );
+          this.setState({ 
+            currentUser: appUser,
+            currentPage: "dashboard"
+          }, resolve); // Using callback to ensure state is updated
         });
-
+        
         // Then fetch vehicles
         await this.fetchVehicles();
 
@@ -416,9 +364,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       users: [...this.state.users, newUser],
       currentUser: newUser,
       currentPage: "profile",
-    }, () => {
-      this.saveStateToStorage();
-    });
+    })
   }
 
   handleProfileSetup = async (e: React.FormEvent) => {
@@ -466,11 +412,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   handleVehicleRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     // Client-side duplicate check
-    if (this.isPlateNumberTaken(this.state.vehicleForm.plateNumber)) {
-      this.setNotification('This plate number is already registered', 'error');
-      return;
-    }
-
+    
     const token = localStorage.getItem('authToken');
     if (!token || !this.state.currentUser) {
       this.setNotification('Please login first', 'error');
@@ -541,86 +483,76 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
   handleLogout = () => {
     localStorage.removeItem('authToken');
-
-    // Use dynamic import to avoid circular dependencies
-    import('@/lib/utils').then(({ statePersistence }) => {
-      statePersistence.clearState();
-
-      this.setState({
-        currentUser: null,
-        currentPage: "landing",
-        profileForm: {
-          name: "",
-          email: "",
-          phone: "",
-        }
-      });
+    this.setState({ 
+      currentUser: null,
+      currentPage: "landing",
+      profileForm: {  // Reset profile form
+        name: "",
+        email: "",
+        phone: "",
+      }
     });
   }
 
   handleExitConfirmation = (message: WebSocketMessage) => {
     if (message.type === 'exit_confirmation' && message.pending_id && message.token) {
-      console.log('Processing exit confirmation:', message);
-
-      // Extract vehicle information from the message or use fallback
-      const plateNumber = this.extractPlateNumberFromMessage(message.message) || 'Unknown';
-      const vehicleName = this.getVehicleName(plateNumber) || 'Unknown Vehicle';
-
+      console.log('Processing exit confirmation:', message)
+      
       this.setState({
         pendingExitConfirmation: {
           pending_id: message.pending_id,
           token: message.token,
           message: message.message || 'Are you the one exiting the premises?',
-          plateNumber,
-          vehicleName
+          plateNumber: message.plateNumber || 'Unknown', 
+          vehicleName: message.vehicleName || 'Unknown Vehicle' 
         }
       }, () => {
-        // Show notification after state is updated
-        this.showWebSocketNotification();
-      });
+        this.showWebSocketNotification()
+      })
     }
-  }
-
-  handlePageChange = (page: string) => {
-    this.setState({
-      currentPage: page,
-      isMenuOpen: false
-    }, () => {
-      this.saveStateToStorage(); // Save state after page change
-    });
   }
 
   connectWebSocket = (token: string) => {
-    try {
-      // Clean up any existing subscriptions first
-      if (this.connectionUnsubscribe) {
-        this.connectionUnsubscribe();
-      }
-      if (this.messageUnsubscribe) {
-        this.messageUnsubscribe();
-      }
-
-      webSocketService.connect(token);
-
-      // Listen for connection status changes
-      this.connectionUnsubscribe = webSocketService.onConnectionChange((connected) => {
-        console.log('WebSocket connection status changed:', connected);
-        this.setState({ webSocketConnected: connected });
-      });
-
-      // Listen for messages
-      this.messageUnsubscribe = webSocketService.onMessage((message) => {
-        console.log('WebSocket message received:', message);
-
-        if (message.type === 'exit_confirmation') {
-          this.handleExitConfirmation(message);
-        }
-      });
-
-    } catch (error) {
-      console.error('WebSocket connection failed:', error);
+  try {
+    // Clean up any existing subscriptions first
+    if (this.connectionUnsubscribe) {
+      this.connectionUnsubscribe();
+      this.connectionUnsubscribe = undefined;
     }
+    if (this.messageUnsubscribe) {
+      this.messageUnsubscribe();
+      this.messageUnsubscribe = undefined;
+    }
+
+    console.log('Connecting WebSocket with token...');
+    webSocketService.connect(token);
+    
+    this.connectionUnsubscribe = webSocketService.onConnectionChange((connected) => {
+      console.log('WebSocket connection status changed:', connected);
+      this.setState({ webSocketConnected: connected });
+      
+      if (!connected && this.state.currentUser) {
+        console.log('WebSocket disconnected, will retry in 5 seconds...');
+      }
+    });
+    
+    this.messageUnsubscribe = webSocketService.onMessage((message) => {
+      console.log('WebSocket message received in component:', message);
+      
+      if (message.type === 'exit_confirmation') {
+        this.handleExitConfirmation(message);
+      }
+      
+      if (message.type === 'security_alert') {
+        this.setNotification(message.message || 'Security alert received', 'info');
+      }
+    });
+    
+  } catch (error) {
+    console.error('WebSocket connection failed:', error);
+    this.setNotification('Connection failed, retrying...', 'error');
   }
+}
 
   extractPlateNumberFromMessage = (message?: string): string | null => {
     if (!message) return null;
@@ -631,18 +563,15 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   }
 
   showWebSocketNotification = () => {
-    const { pendingExitConfirmation } = this.state;
-    if (!pendingExitConfirmation) return;
+      const { pendingExitConfirmation } = this.state
+      if (!pendingExitConfirmation) return
 
-    const notificationMessage = `Are you the one exiting in ${pendingExitConfirmation.vehicleName} (${pendingExitConfirmation.plateNumber})?`;
-
-    this.setState({
-      showNotification: true,
-      notificationMessage: notificationMessage,
-      isEntryNotification: false
-    });
+      this.setState({
+        showNotification: true,
+        notificationMessage: pendingExitConfirmation.message,
+        isEntryNotification: false
+      })
   }
-
 
   deleteVehicle = async (vehicleId: string) => {
     const token = localStorage.getItem('authToken');
@@ -859,10 +788,9 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
             <Button
               variant={this.state.currentPage === "dashboard" ? "default" : "ghost"}
               className="w-full justify-start"
-              // onClick={() => {
-              //   this.setState({ currentPage: "dashboard", isMenuOpen: false })
-              // }}
-              onClick={() => this.handlePageChange("dashboard")}
+              onClick={() => {
+                this.setState({ currentPage: "dashboard", isMenuOpen: false })
+              }}
             >
               <Car className="mr-2 h-4 w-4" />
               Dashboard
@@ -870,10 +798,9 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
             <Button
               variant={this.state.currentPage === "vehicle-registration" ? "default" : "ghost"}
               className="w-full justify-start"
-              // onClick={() => {
-              //   this.setState({ currentPage: "vehicle-registration", isMenuOpen: false })
-              // }}
-              onClick={() => this.handlePageChange("vehicle-registration")}
+              onClick={() => {
+                this.setState({ currentPage: "vehicle-registration", isMenuOpen: false })
+              }}
             >
               <Plus className="mr-2 h-4 w-4" />
               Register Vehicle
@@ -881,10 +808,9 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
             <Button
               variant={this.state.currentPage === "registered-vehicles" ? "default" : "ghost"}
               className="w-full justify-start"
-              // onClick={() => {
-              //   this.setState({ currentPage: "registered-vehicles", isMenuOpen: false })
-              // }}
-              onClick={() => this.handlePageChange("registered-vehicles")}
+              onClick={() => {
+                this.setState({ currentPage: "registered-vehicles", isMenuOpen: false })
+              }}
             >
               <Car className="mr-2 h-4 w-4" />
               My Vehicles
@@ -892,11 +818,9 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
             <Button
               variant={this.state.currentPage === "activity-logs" ? "default" : "ghost"}
               className="w-full justify-start"
-              // onClick={() => {
-              //   this.setState({ currentPage: "activity-logs", isMenuOpen: false })
-              // }}
-              onClick={() => this.handlePageChange("activity-logs")}
-
+              onClick={() => {
+                this.setState({ currentPage: "activity-logs", isMenuOpen: false })
+              }}
             >
               <Activity className="mr-2 h-4 w-4" />
               Activity Logs
@@ -908,10 +832,9 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
             <Button
               variant={this.state.currentPage === "dashboard" ? "default" : "ghost"}
               className="w-full justify-start"
-              // onClick={() => {
-              //   this.setState({ currentPage: "dashboard", isMenuOpen: false })
-              // }}
-              onClick={() => this.handlePageChange("dashboard")}
+              onClick={() => {
+                this.setState({ currentPage: "dashboard", isMenuOpen: false })
+              }}
             >
               <Shield className="mr-2 h-4 w-4" />
               Security Dashboard
@@ -919,10 +842,9 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
             <Button
               variant={this.state.currentPage === "activity-logs" ? "default" : "ghost"}
               className="w-full justify-start"
-              // onClick={() => {
-              //   this.setState({ currentPage: "activity-logs", isMenuOpen: false })
-              // }}
-              onClick={() => this.handlePageChange("activity-logs")}
+              onClick={() => {
+                this.setState({ currentPage: "activity-logs", isMenuOpen: false })
+              }}
             >
               <Activity className="mr-2 h-4 w-4" />
               Monitor Activity
@@ -932,11 +854,10 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
         <Button
           variant={this.state.currentPage === "profile" ? "default" : "ghost"}
           className="w-full justify-start"
-          // onClick={() => {
-          //   this.setState({ currentPage: "profile", isMenuOpen: false }) // Changed to "profile"
-          // }}
-          onClick={() => this.handlePageChange("profile")}
-        >
+          onClick={() => {
+            this.setState({ currentPage: "profile", isMenuOpen: false }) // Changed to "profile"
+          }}
+          >
           <User className="mr-2 h-4 w-4" />
           Profile
         </Button>
@@ -1015,9 +936,9 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
                 )}
                 <h1 className="text-xl font-semibold">My Profile</h1>
               </div>
-              <Button
-                variant="ghost"
-                onClick={() => this.handlePageChange("dashboard")}
+              <Button 
+                variant="ghost" 
+                onClick={() => this.setState({ currentPage: "dashboard" })}
               >
                 Back to Dashboard
               </Button>
@@ -1092,9 +1013,9 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
                 )}
                 <h1 className="text-xl font-semibold">My Profile</h1>
               </div>
-              <Button
-                variant="ghost"
-                onClick={() => this.handlePageChange("dashboard")}
+              <Button 
+                variant="ghost" 
+                onClick={() => this.setState({ currentPage: "dashboard" })}
               >
                 Back to Dashboard
               </Button>
@@ -1167,9 +1088,9 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
                   {this.state.currentUser.role === "Security" ? "Activity Monitor" : "Activity Logs"}
                 </h1>
               </div>
-              <Button
-                variant="ghost"
-                onClick={() => this.handlePageChange("dashboard")}
+              <Button 
+                variant="ghost" 
+                onClick={() => this.setState({ currentPage: "dashboard" })}
               >
                 Back to Dashboard
               </Button>
@@ -1262,7 +1183,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
           this.setState({ vehicleForm: { ...this.state.vehicleForm, type } })
         }
         onSubmit={this.handleVehicleRegistration}
-        onCancel={() => this.handlePageChange("dashboard")}
+        onCancel={() => this.setState({ currentPage: "dashboard" })}
       />
     );
   }
@@ -1332,21 +1253,44 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1">
-              <DashboardMain
-                userRole={this.state.currentUser?.role || "User"}
-                userVehiclesCount={userVehicles.length}
-                activeSessionsCount={this.state.activityLogs.filter(log => log.logType === 'Entry').length}
-                totalVehiclesCount={this.state.vehicles.length}
-                recentActivities={recentActivities} // Pass the recent activities
-                onNavigate={(page) => this.handlePageChange(page)}
-              />
-            </main>
+          <main className="flex-1">
+            <DashboardMain
+              userRole={this.state.currentUser?.role || "User"}
+              userVehiclesCount={userVehicles.length}
+              activeSessionsCount={this.state.activityLogs.filter(log => log.logType === 'Entry').length}
+              totalVehiclesCount={this.state.vehicles.length}
+              recentActivities={recentActivities} // Pass the recent activities
+              onNavigate={(page) => this.setState({ currentPage: page })}
+            />
+          </main>
           </div>
         </div>
         {this.renderNotification()}
       </div>
     )
+  }
+
+  renderWebSocketStatus() {
+    return (
+      <div className={`fixed top-4 right-4 px-3 py-1 rounded-full text-xs font-medium ${
+        this.state.webSocketConnected 
+          ? 'bg-green-100 text-green-800' 
+          : 'bg-red-100 text-red-800'
+      }`}>
+        {this.state.webSocketConnected ? '🟢 Connected' : '🔴 Disconnected'}
+      </div>
+    );
+  }
+
+  testWebSocketMessage = () => {
+    const testMessage: WebSocketMessage = {
+      type: 'exit_confirmation',
+      pending_id: 'test-pending-123',
+      token: 'test-token-456',
+      message: 'Vehicle ABC-123 is exiting the premises. Are you the driver?'
+    };
+    
+    this.handleExitConfirmation(testMessage);
   }
 
 
@@ -1357,6 +1301,7 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     return (
       <>
         {currentPage}
+        {this.renderWebSocketStatus()}
         {this.state.showNotification && (
           <Notification
             message={this.state.notificationMessage}

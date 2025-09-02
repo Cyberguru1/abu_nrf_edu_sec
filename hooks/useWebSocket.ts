@@ -2,7 +2,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { webSocketService, WebSocketMessage } from '@/services/websocketService';
 
-export const useWebSocket = () => {
+export const useWebSocket = (onExitConfirmation?: (message: WebSocketMessage) => void) => {
   const [isConnected, setIsConnected] = useState(webSocketService.getConnectionStatus());
 
   useEffect(() => {
@@ -11,18 +11,23 @@ export const useWebSocket = () => {
       webSocketService.connect(token);
     }
 
-    const unsubscribe = webSocketService.onMessage((message) => {
-      if (message.type === 'exit_confirmation') {
-        // Handle connection status updates
-        setIsConnected(webSocketService.getConnectionStatus());
+    const unsubscribeConnection = webSocketService.onConnectionChange((connected) => {
+      setIsConnected(connected);
+    });
+
+    const unsubscribeMessage = webSocketService.onMessage((message) => {
+      console.log('WebSocket message in hook:', message); // Debug log
+      if (message.type === 'exit_confirmation' && onExitConfirmation) {
+        onExitConfirmation(message); // Call the provided callback
       }
     });
 
     return () => {
-      unsubscribe();
+      unsubscribeMessage();
+      unsubscribeConnection();
       webSocketService.disconnect();
     };
-  }, []);
+  }, [onExitConfirmation]);
 
   const sendMessage = useCallback((message: WebSocketMessage) => {
     return webSocketService.sendMessage(message);
@@ -31,6 +36,6 @@ export const useWebSocket = () => {
   return {
     isConnected,
     sendMessage,
-    onMessage: webSocketService.onMessage.bind(webSocketService)
+    onMessage: webSocketService.onMessage.bind(webSocketService),
   };
 };

@@ -1,5 +1,6 @@
-import { env } from "@/config/config";
+import { env } from '../config/config';
 
+const API_BASE_URL = env.API_BASE_URL;
 
 interface ApiResponse<T> {
   data?: T;
@@ -9,6 +10,7 @@ interface ApiResponse<T> {
 export const api = {
   async post<T>(endpoint: string, body: any): Promise<ApiResponse<T>> {
     try {
+      const response = await fetch(`${env.API_BASE_URL}${endpoint}`, {
       const response = await fetch(`${env.API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {

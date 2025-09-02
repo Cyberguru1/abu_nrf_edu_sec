@@ -3,6 +3,8 @@ import { env } from '@/config/config';
 import { User, RegisterData, LoginData, Profile } from '@/types/auth';
 
 
+const API_BASE_URL = env.API_BASE_URL;
+
 interface BackendUser {
   ID?: string;
   id?: string;
