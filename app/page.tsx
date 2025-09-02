@@ -1278,14 +1278,19 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       </div>
     )
   }
-
   renderWebSocketStatus() {
+    if (!this.state.currentUser) {
+      return null; // Don't show WebSocket status if user is not logged in
+    }
+
     return (
-      <div className={`fixed top-4 right-4 px-3 py-1 rounded-full text-xs font-medium ${this.state.webSocketConnected
-          ? 'bg-green-100 text-green-800'
-          : 'bg-red-100 text-red-800'
-        }`}>
-        {this.state.webSocketConnected ? '🟢' : '🔴'}
+      <div
+        className={`fixed bottom-1 right-1 px-2 py-1 rounded-full text-xs font-medium ${this.state.webSocketConnected
+            ? 'bg-green-100 text-green-800'
+            : 'bg-red-100 text-red-800'
+          }`}
+      >
+        {this.state.webSocketConnected ? '🟢 Connected' : '🔴 Disconnected'}
       </div>
     );
   }
