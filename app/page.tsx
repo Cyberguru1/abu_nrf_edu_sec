@@ -205,37 +205,56 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   };
 
   handleNotificationResponse = async (response: boolean) => {
-    const { pendingExitConfirmation } = this.state;
-    
-    if (response && pendingExitConfirmation) {
-      // Send response via WebSocket
-      const success = webSocketService.sendMessage({
-        type: 'response',
-        pending_id: pendingExitConfirmation.pending_id,
-        token: pendingExitConfirmation.token,
-        confirmed: response
-      });
+  const { pendingExitConfirmation } = this.state;
+  
+  if (pendingExitConfirmation) {
+    console.log('Sending WebSocket response:', {
+      pending_id: pendingExitConfirmation.pending_id,
+      token: pendingExitConfirmation.token,
+      confirmed: response
+    });
 
-      if (success) {
-        this.setNotification("Response sent successfully", 'success');
-      } else {
-        this.setNotification("Failed to send response", 'error');
+    // Send response via WebSocket - match exact backend structure
+    const success = webSocketService.sendMessage({
+      type: 'response',
+      pending_id: pendingExitConfirmation.pending_id,
+      token: pendingExitConfirmation.token,
+      confirmed: response
+    });
+
+    if (success) {
+      this.setNotification(
+        response ? "Exit confirmed successfully" : "Exit denied - Security has been notified", 
+        response ? 'success' : 'info'
+      );
+      
+      // Log the action for debugging
+      console.log(`User ${response ? 'confirmed' : 'denied'} exit for vehicle ${pendingExitConfirmation.plateNumber}`);
+      
+      // If denied, show additional message
+      if (!response) {
+        setTimeout(() => {
+          this.setNotification("Security personnel have been alerted about the unauthorized exit attempt", 'info');
+        }, 2000);
+      }
+    } else {
+      this.setNotification("Failed to send response - connection issue", 'error');
+      
+      // Try to reconnect if sending failed
+      const authToken = localStorage.getItem('authToken');
+      if (authToken) {
+        console.log('Attempting to reconnect WebSocket...');
+        webSocketService.reconnect();
       }
     }
-    
-    // Reset the notification state
-    this.setState({ 
-      showNotification: false,
-      pendingExitConfirmation: undefined
-    });
   }
-
-  isPlateNumberTaken = (plateNumber: string): boolean => {
-    return this.state.vehicles.some(v => 
-      v.plateNumber.toLowerCase() === plateNumber.toLowerCase() ||
-      v.plate_number?.toLowerCase() === plateNumber.toLowerCase()
-    );
-  };
+  
+  // Reset the notification state
+  this.setState({ 
+    showNotification: false,
+    pendingExitConfirmation: undefined
+  });
+}
   
   // Add this in componentDidMount to simulate notifications:
   componentDidMount() {
@@ -475,58 +494,63 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
 
   handleExitConfirmation = (message: WebSocketMessage) => {
     if (message.type === 'exit_confirmation' && message.pending_id && message.token) {
-      console.log('Processing exit confirmation:', message);
-      
-      // Extract vehicle information from the message or use fallback
-      const plateNumber = this.extractPlateNumberFromMessage(message.message) || 'Unknown';
-      const vehicleName = this.getVehicleName(plateNumber) || 'Unknown Vehicle';
+      console.log('Processing exit confirmation:', message)
       
       this.setState({
         pendingExitConfirmation: {
           pending_id: message.pending_id,
           token: message.token,
           message: message.message || 'Are you the one exiting the premises?',
-          plateNumber,
-          vehicleName
+          plateNumber: message.plateNumber || 'Unknown', 
+          vehicleName: message.vehicleName || 'Unknown Vehicle' 
         }
       }, () => {
-        // Show notification after state is updated
-        this.showWebSocketNotification();
-      });
+        this.showWebSocketNotification()
+      })
     }
   }
 
   connectWebSocket = (token: string) => {
-    try {
-      // Clean up any existing subscriptions first
-      if (this.connectionUnsubscribe) {
-        this.connectionUnsubscribe();
-      }
-      if (this.messageUnsubscribe) {
-        this.messageUnsubscribe();
-      }
-
-      webSocketService.connect(token);
-      
-      // Listen for connection status changes
-      this.connectionUnsubscribe = webSocketService.onConnectionChange((connected) => {
-        console.log('WebSocket connection status changed:', connected);
-        this.setState({ webSocketConnected: connected });
-      });
-      
-      // Listen for messages
-      this.messageUnsubscribe = webSocketService.onMessage((message) => {
-        console.log('WebSocket message received:', message);
-        
-        if (message.type === 'exit_confirmation') {
-          this.handleExitConfirmation(message);
-        }
-      });
-      
-    } catch (error) {
-      console.error('WebSocket connection failed:', error);
+  try {
+    // Clean up any existing subscriptions first
+    if (this.connectionUnsubscribe) {
+      this.connectionUnsubscribe();
+      this.connectionUnsubscribe = undefined;
     }
+    if (this.messageUnsubscribe) {
+      this.messageUnsubscribe();
+      this.messageUnsubscribe = undefined;
+    }
+
+    console.log('Connecting WebSocket with token...');
+    webSocketService.connect(token);
+    
+    this.connectionUnsubscribe = webSocketService.onConnectionChange((connected) => {
+      console.log('WebSocket connection status changed:', connected);
+      this.setState({ webSocketConnected: connected });
+      
+      if (!connected && this.state.currentUser) {
+        console.log('WebSocket disconnected, will retry in 5 seconds...');
+      }
+    });
+    
+    this.messageUnsubscribe = webSocketService.onMessage((message) => {
+      console.log('WebSocket message received in component:', message);
+      
+      if (message.type === 'exit_confirmation') {
+        this.handleExitConfirmation(message);
+      }
+      
+      if (message.type === 'security_alert') {
+        this.setNotification(message.message || 'Security alert received', 'info');
+      }
+    });
+    
+  } catch (error) {
+    console.error('WebSocket connection failed:', error);
+    this.setNotification('Connection failed, retrying...', 'error');
   }
+}
 
   extractPlateNumberFromMessage = (message?: string): string | null => {
     if (!message) return null;
@@ -537,18 +561,15 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
   }
 
   showWebSocketNotification = () => {
-    const { pendingExitConfirmation } = this.state;
-    if (!pendingExitConfirmation) return;
+      const { pendingExitConfirmation } = this.state
+      if (!pendingExitConfirmation) return
 
-    const notificationMessage = `Are you the one exiting in ${pendingExitConfirmation.vehicleName} (${pendingExitConfirmation.plateNumber})?`;
-    
-    this.setState({
-      showNotification: true,
-      notificationMessage: notificationMessage,
-      isEntryNotification: false
-    });
+      this.setState({
+        showNotification: true,
+        notificationMessage: pendingExitConfirmation.message,
+        isEntryNotification: false
+      })
   }
-
 
   deleteVehicle = async (vehicleId: string) => {
     const token = localStorage.getItem('authToken');
@@ -1262,22 +1283,6 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
     this.handleExitConfirmation(testMessage);
   }
 
-  // Add a test button in your render method for development
-  renderTestButton() {
-    if (process.env.NODE_ENV === 'development') {
-      return (
-        <button
-          onClick={this.testWebSocketMessage}
-          className="fixed top-20 right-4 bg-blue-500 text-white px-3 py-1 rounded text-sm"
-        >
-          Test WebSocket
-        </button>
-      );
-    }
-    return null;
-  }
-
-
 
 
   render() {
@@ -1287,7 +1292,6 @@ export default class VehicleSecuritySystem extends Component<{}, VehicleSecurity
       <>
         {currentPage}
         {this.renderWebSocketStatus()}
-        {this.renderTestButton()}
         {this.state.showNotification && (
           <Notification
             message={this.state.notificationMessage}
