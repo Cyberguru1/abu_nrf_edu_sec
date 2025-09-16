@@ -73,7 +73,7 @@ export const VehicleRegistration = ({
         }
 
         if (resp.error) {
-          setPlateError(resp.error);
+          setPlateError("Invalid plate number");
         }
         // Set vehicle type to car
         onTypeChange('car');
