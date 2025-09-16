@@ -77,7 +77,7 @@ export async function POST(req: Request, res: NextApiResponse<VerifyPlateRespons
             const scriptContent = script.textContent || '';
             const errorMatch = scriptContent.match(/showAlert\('error',\s*'[^']*',\s*'([^']*)'/);
             if (errorMatch) {
-                errorMessage = errorMatch[1]; // e.g., "Invalid number plate"
+                errorMessage = errorMatch[1]; // e.g., "Invalid plate number"
                 break;
             }
         }

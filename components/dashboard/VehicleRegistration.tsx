@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { verifyVehiclePlate } from "@/services/verifyPlateNumber";
 import { Car } from "lucide-react";
+import { useState } from "react";
 
 interface VehicleRegistrationProps {
   formData: {
@@ -36,11 +37,32 @@ export const VehicleRegistration = ({
     { value: 'bike', label: 'Bike' }
   ];
 
+  const [plateError, setPlateError] = useState("");
+  const plateNumberRegex = /^([A-Z0-9]+-[A-Z0-9]+)$/i;
+
   const handlePlateNumberBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
     const plate = formData.plateNumber;
+
+
+    if (!plate) {
+      setPlateError("Plate number is required.");
+      formData.color = "";
+      formData.model = "";
+      return;
+    }
+
+    // Validate format
+    if (!plateNumberRegex.test(plate)) {
+      setPlateError("Invalid plate number format. Use xxx-xxxxx.");
+      return;
+    }
+
+    setPlateError("");
+
+    const normalizedPlate = plate.replace(/-/g, '').toLowerCase();
     if (plate) {
       try {
-        const resp = await verifyVehiclePlate(plate);
+        const resp = await verifyVehiclePlate(normalizedPlate);
         console.log(resp);
         // Update form data with the response
         if (resp.data?.vehicleMake) {
@@ -48,6 +70,10 @@ export const VehicleRegistration = ({
         }
         if (resp.data?.vehicleColor) {
           formData.color = resp.data.vehicleColor;
+        }
+
+        if (resp.error) {
+          setPlateError(resp.error);
         }
         // Set vehicle type to car
         onTypeChange('car');
@@ -83,12 +109,18 @@ export const VehicleRegistration = ({
                   <Input
                     id="plateNumber"
                     value={formData.plateNumber}
-                    onChange={(e) => onPlateNumberChange(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value.toUpperCase();
+                      onPlateNumberChange(value);
+                    }}
                     onBlur={handlePlateNumberBlur}
                     placeholder="e.g., ABC-123"
                     required
                     maxLength={15}
                   />
+                  {plateError && (
+                    <p className="text-red-500 text-sm mt-1">{plateError}</p>
+                  )}
                 </div>
 
                 {/* Model */}
