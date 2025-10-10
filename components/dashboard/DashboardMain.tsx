@@ -165,8 +165,12 @@ export const DashboardMain = ({
           </>
         )}
 
-        {/* Quick Actions Card (Common) */}
-        <Card className="md:col-span-2 lg:col-span-1">
+      </div>
+
+      {/* Actions and Activity Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Quick Actions Card */}
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg">Quick Actions</CardTitle>
           </CardHeader>
@@ -187,71 +191,71 @@ export const DashboardMain = ({
             </button>
           </CardContent>
         </Card>
+
+        {/* Recent Activity Section */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>
+              {userRole === "Security"
+                ? "Latest vehicle movements across campus"
+                : "Your recent access history"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentActivities.length > 0 ? (
+              <div className="space-y-3">
+                {recentActivities.slice(0, 3).map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-full ${activity.logType === 'Entry' ? 'bg-green-100' : 'bg-gray-100'
+                        }`}>
+                        {activity.logType === 'Entry' ? (
+                          <LogIn className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <LogOut className="h-4 w-4 text-gray-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{activity.vehicleName}</p>
+                        <p className="text-xs text-gray-500 truncate">{activity.vehiclePlate}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-medium">
+                        {formatDateTime(activity.logTime)}
+                      </p>
+                      <Badge variant="outline" className="text-xs mt-1">
+                        {activity.gate_name}
+                      </Badge>
+                      <Badge
+                        variant={getLogTypeVariant(activity.logType)}
+                        className="text-xs mt-0"
+                      >
+                        {getLogTypeIcon(activity.logType)}
+                        {activity.logType}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <p>No recent activity found</p>
+              </div>
+            )}
+
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => onNavigate("activity-logs")}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                View full activity logs
+              </button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Recent Activity Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>
-            {userRole === "Security"
-              ? "Latest vehicle movements across campus"
-              : "Your recent access history"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {recentActivities.length > 0 ? (
-            <div className="space-y-3">
-              {recentActivities.slice(0, 3).map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-full ${activity.logType === 'Entry' ? 'bg-green-100' : 'bg-gray-100'
-                      }`}>
-                      {activity.logType === 'Entry' ? (
-                        <LogIn className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <LogOut className="h-4 w-4 text-gray-600" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{activity.vehicleName}</p>
-                      <p className="text-xs text-gray-500 truncate">{activity.vehiclePlate}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-medium">
-                      {formatDateTime(activity.logTime)}
-                    </p>
-                    <Badge variant="outline" className="text-xs mt-1">
-                      {activity.gate_name}
-                    </Badge>
-                    <Badge
-                      variant={getLogTypeVariant(activity.logType)}
-                      className="text-xs mt-0"
-                    >
-                      {getLogTypeIcon(activity.logType)}
-                      {activity.logType}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-400">
-              <p>No recent activity found</p>
-            </div>
-          )}
-
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => onNavigate("activity-logs")}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              View full activity logs
-            </button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
