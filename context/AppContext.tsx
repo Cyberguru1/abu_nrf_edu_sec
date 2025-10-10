@@ -7,13 +7,11 @@ import { activityService } from '@/services/activityService';
 import { webSocketService, WebSocketMessage } from '@/services/websocketService';
 import { VehicleActivity, RegisterData } from '@/types/auth';
 
-// Type definitions
 export type AppUser = {
   id: string;
   name: string;
   email: string;
   role: "User" | "Security";
-  phone?: string;
 };
 
 export type Vehicle = {
@@ -61,6 +59,7 @@ interface AppContextState {
   setProfileForm: (form: any) => void;
   updateProfile: (data: any) => Promise<void>;
   register: (data: RegisterData) => Promise<string | undefined>;
+  isInitializing: boolean; // NEW: Track initialization state
 }
 
 const AppContext = createContext<AppContextState | undefined>(undefined);
@@ -75,7 +74,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '' });
+  const [isInitializing, setIsInitializing] = useState(true); // NEW: Initialize as true
 
+  // FIX: Validate token on mount with proper state management
   useEffect(() => {
     const validateToken = async () => {
       const token = localStorage.getItem('authToken');
@@ -87,9 +88,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           connectWebSocket(token);
           fetchVehicles();
         } else {
+          // Token is invalid, clear it
           localStorage.removeItem('authToken');
         }
       }
+      // Mark initialization as complete
+      setIsInitializing(false);
     };
     validateToken();
   }, []);
@@ -233,7 +237,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const transformedLogs: ActivityLog[] = sortedActivities.map((activity) => ({
       id: activity.id,
       vehiclePlate: activity.plate_number,
-      vehicleName: 'Unknown Vehicle', // This needs to be resolved
+      vehicleName: 'Unknown Vehicle',
       logTime: activity.timestamp,
       logType: activity.is_entry ? 'Entry' : 'Exit',
       gate_name: activity.gate_name,
@@ -259,7 +263,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load profile';
-        setNotification(errorMessage, 'error');
+        setNotification({
+          show: true,
+          message: errorMessage,
+          type: 'error'
+        }); 
       } finally {
         setProfileLoading(false);
       }
@@ -284,23 +292,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 name: profile?.full_name || data.full_name,
                 phone: profile?.phone || data.phone
             });
-            setNotification("Profile updated successfully!", 'success');
+            setNotification({
+              show: true,
+              message: "Profile updated successfully!",
+              type: 'success'
+            });
         }
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Profile update failed';
-        setNotification(errorMessage, 'error');
+        setNotification({
+          show: true,
+          message: errorMessage,
+          type: 'error'
+        });
     } finally {
         setProfileLoading(false);
     }
-};
-
+  };
 
   const connectWebSocket = (token: string) => {
     webSocketService.connect(token);
     webSocketService.onConnectionChange(setWebSocketConnected);
     webSocketService.onMessage((message: WebSocketMessage) => {
       if (message.type === 'exit_confirmation') {
-        // Handle exit confirmation
         setNotificationWrapper(message.message || 'Exit confirmation requested', 'info');
       } else if (message.type === 'security_alert') {
         setNotificationWrapper(message.message || 'Security alert!', 'error');
@@ -354,7 +368,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setProfileForm,
     updateProfile,
     register,
-    updateVehicle: async () => {} // Placeholder for updateVehicle
+    isInitializing, // NEW: Expose initialization state
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
