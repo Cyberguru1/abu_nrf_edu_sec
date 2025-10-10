@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 
 interface NotificationProps {
   message: string;
@@ -10,48 +10,83 @@ interface NotificationProps {
   isExitConfirmation?: boolean;
 }
 
-export const Notification = ({ message, type, onClose, show, onConfirm, isExitConfirmation = false}: NotificationProps) => {
+export const Notification = ({
+  message,
+  type,
+  onClose,
+  show,
+  onConfirm,
+  isExitConfirmation = false,
+}: NotificationProps) => {
   if (!show) return null;
 
-    return (
-      <div className={`
-        fixed bottom-4 right-4 bg-white rounded-lg shadow-xl border p-4 max-w-sm z-50
-        transform transition-all duration-300 ease-in-out
-        ${show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}
-      `}>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900">{message}</p>
-            {onConfirm && (
-              <div className="mt-3 flex space-x-2">
+  const getIcon = () => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="h-6 w-6 text-green-500" />;
+      case 'error':
+        return <AlertCircle className="h-6 w-6 text-red-500" />;
+      case 'info':
+      default:
+        return <Info className="h-6 w-6 text-blue-500" />;
+    }
+  };
+
+  return (
+    <div
+      className={`
+        fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50
+        transition-opacity duration-300 ease-in-out
+        ${show ? 'opacity-100' : 'opacity-0'}
+      `}
+    >
+      <div
+        className={`
+          bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4
+          transform transition-all duration-300 ease-in-out
+          ${show ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}
+        `}
+      >
+        <div className="flex items-start">
+          <div className="flex-shrink-0">{getIcon()}</div>
+          <div className="ml-4 flex-1">
+            <p className="text-lg font-medium text-gray-900">
+              {isExitConfirmation ? 'Confirmation Required' : 'Notification'}
+            </p>
+            <p className="text-sm text-gray-600 mt-1">{message}</p>
+
+            {isExitConfirmation && onConfirm && (
+              <div className="mt-4 flex space-x-3">
                 <button
                   onClick={() => {
                     onConfirm(true);
                     onClose();
                   }}
-                  className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
+                  className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
                 >
-                  Yes
+                  Confirm Exit
                 </button>
                 <button
                   onClick={() => {
                     onConfirm(false);
                     onClose();
                   }}
-                  className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors"
                 >
-                  No
+                  Deny
                 </button>
               </div>
             )}
           </div>
           <button
             onClick={onClose}
-            className="ml-4 text-gray-400 hover:text-gray-600 text-lg"
+            className="ml-4 text-gray-400 hover:text-gray-600"
+            aria-label="Close"
           >
-            ×
+            <X className="h-5 w-5" />
           </button>
         </div>
       </div>
-    );
+    </div>
+  );
 };

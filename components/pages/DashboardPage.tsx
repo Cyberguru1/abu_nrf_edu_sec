@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { useAppContext } from '@/context/AppContext';
 import { DashboardMain } from '../dashboard/DashboardMain';
 import { NavigationMenu } from '../dashboard/NavigationMenu';
+import { ConnectivityIndicator } from '../ui/ConnectivityIndicator';
 
 export const DashboardPage = () => {
-  const { currentUser, vehicles, activityLogs, fetchVehicles, fetchActivities, logout, setCurrentPage } = useAppContext();
+  const { currentUser, vehicles, activityLogs, fetchVehicles, fetchActivities, logout, setCurrentPage, webSocketConnected } = useAppContext();
 
   useEffect(() => {
     fetchVehicles();
@@ -93,6 +94,7 @@ export const DashboardPage = () => {
           </main>
         </div>
       </div>
+      <ConnectivityIndicator isConnected={webSocketConnected} />
     </div>
   );
 };
