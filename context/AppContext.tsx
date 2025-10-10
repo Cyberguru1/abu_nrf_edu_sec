@@ -5,15 +5,13 @@ import { authService, profileService } from '@/services/authService';
 import { vehicleService } from '@/services/vehicleService';
 import { activityService } from '@/services/activityService';
 import { webSocketService, WebSocketMessage } from '@/services/websocketService';
-import { VehicleActivity } from '@/types/auth';
+import { VehicleActivity, RegisterData } from '@/types/auth';
 
-// Type definitions
 export type AppUser = {
   id: string;
   name: string;
   email: string;
   role: "User" | "Security";
-  phone?: string;
 };
 
 export type Vehicle = {
@@ -60,6 +58,8 @@ interface AppContextState {
   profileForm: { name: string; email: string; phone: string; };
   setProfileForm: (form: any) => void;
   updateProfile: (data: any) => Promise<void>;
+  register: (data: RegisterData) => Promise<string | undefined>;
+  isInitializing: boolean; // NEW: Track initialization state
 }
 
 const AppContext = createContext<AppContextState | undefined>(undefined);
@@ -74,14 +74,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '' });
+  const [isInitializing, setIsInitializing] = useState(true); // NEW: Initialize as true
 
+  // FIX: Validate token on mount with proper state management
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      // You might want to verify the token and fetch user data here
-      // For now, we'll just connect to WebSocket
-      connectWebSocket(token);
-    }
+    const validateToken = async () => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        const { user, error } = await authService.getMe(token);
+        if (user) {
+          setCurrentUser(user);
+          setCurrentPage('dashboard');
+          connectWebSocket(token);
+          fetchVehicles();
+        } else {
+          // Token is invalid, clear it
+          localStorage.removeItem('authToken');
+        }
+      }
+      // Mark initialization as complete
+      setIsInitializing(false);
+    };
+    validateToken();
   }, []);
 
   const setNotificationWrapper = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -223,7 +237,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const transformedLogs: ActivityLog[] = sortedActivities.map((activity) => ({
       id: activity.id,
       vehiclePlate: activity.plate_number,
-      vehicleName: 'Unknown Vehicle', // This needs to be resolved
+      vehicleName: 'Unknown Vehicle',
       logTime: activity.timestamp,
       logType: activity.is_entry ? 'Entry' : 'Exit',
       gate_name: activity.gate_name,
@@ -249,7 +263,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load profile';
-        setNotification(errorMessage, 'error');
+        setNotification({
+          show: true,
+          message: errorMessage,
+          type: 'error'
+        }); 
       } finally {
         setProfileLoading(false);
       }
@@ -274,28 +292,58 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 name: profile?.full_name || data.full_name,
                 phone: profile?.phone || data.phone
             });
-            setNotification("Profile updated successfully!", 'success');
+            setNotification({
+              show: true,
+              message: "Profile updated successfully!",
+              type: 'success'
+            });
         }
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Profile update failed';
-        setNotification(errorMessage, 'error');
+        setNotification({
+          show: true,
+          message: errorMessage,
+          type: 'error'
+        });
     } finally {
         setProfileLoading(false);
     }
-};
-
+  };
 
   const connectWebSocket = (token: string) => {
     webSocketService.connect(token);
     webSocketService.onConnectionChange(setWebSocketConnected);
     webSocketService.onMessage((message: WebSocketMessage) => {
       if (message.type === 'exit_confirmation') {
-        // Handle exit confirmation
         setNotificationWrapper(message.message || 'Exit confirmation requested', 'info');
       } else if (message.type === 'security_alert') {
         setNotificationWrapper(message.message || 'Security alert!', 'error');
       }
     });
+  };
+
+  const register = async (data: RegisterData) => {
+    setLoading(true);
+    const { user, error } = await authService.register(data);
+    setLoading(false);
+    if (error) {
+      setNotificationWrapper(error, 'error');
+      return error;
+    }
+    if (user && user.token) {
+        const appUser: AppUser = {
+            id: user.ID || '',
+            name: user.name,
+            email: user.email,
+            role: user.role as "User" | "Security",
+        };
+      localStorage.setItem('authToken', user.token);
+      setCurrentUser(appUser);
+      setCurrentPage('dashboard');
+      connectWebSocket(user.token);
+      fetchVehicles();
+      setNotificationWrapper('Registration successful!', 'success');
+    }
   };
 
   const value = {
@@ -319,8 +367,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     profileForm,
     setProfileForm,
     updateProfile,
-    register: async () => {}, // Placeholder for register
-    updateVehicle: async () => {} // Placeholder for updateVehicle
+    register,
+    isInitializing, // NEW: Expose initialization state
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

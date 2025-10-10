@@ -136,6 +136,27 @@ export const authService = {
     } catch (error) {
       return { error: 'Network error' };
     }
+  },
+
+  async getMe(token: string): Promise<{ user?: AppUser; error?: string }> {
+    try {
+      const response = await fetch(`${env.API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { error: errorData.message || 'Failed to fetch user' };
+      }
+
+      const responseData = await response.json();
+      return { user: convertToAppUser(responseData.user || responseData.data) };
+    } catch (error) {
+      return { error: 'Network error' };
+    }
   }
 };
 
