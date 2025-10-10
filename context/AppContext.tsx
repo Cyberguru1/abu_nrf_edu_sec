@@ -5,7 +5,7 @@ import { authService, profileService } from '@/services/authService';
 import { vehicleService } from '@/services/vehicleService';
 import { activityService } from '@/services/activityService';
 import { webSocketService, WebSocketMessage } from '@/services/websocketService';
-import { VehicleActivity } from '@/types/auth';
+import { VehicleActivity, RegisterData } from '@/types/auth';
 
 // Type definitions
 export type AppUser = {
@@ -60,6 +60,7 @@ interface AppContextState {
   profileForm: { name: string; email: string; phone: string; };
   setProfileForm: (form: any) => void;
   updateProfile: (data: any) => Promise<void>;
+  register: (data: RegisterData) => Promise<string | undefined>;
 }
 
 const AppContext = createContext<AppContextState | undefined>(undefined);
@@ -76,12 +77,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '' });
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      // You might want to verify the token and fetch user data here
-      // For now, we'll just connect to WebSocket
-      connectWebSocket(token);
-    }
+    const validateToken = async () => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        const { user, error } = await authService.getMe(token);
+        if (user) {
+          setCurrentUser(user);
+          setCurrentPage('dashboard');
+          connectWebSocket(token);
+          fetchVehicles();
+        } else {
+          localStorage.removeItem('authToken');
+        }
+      }
+    };
+    validateToken();
   }, []);
 
   const setNotificationWrapper = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -298,6 +308,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const register = async (data: RegisterData) => {
+    setLoading(true);
+    const { user, error } = await authService.register(data);
+    setLoading(false);
+    if (error) {
+      setNotificationWrapper(error, 'error');
+      return error;
+    }
+    if (user && user.token) {
+        const appUser: AppUser = {
+            id: user.ID || '',
+            name: user.name,
+            email: user.email,
+            role: user.role as "User" | "Security",
+        };
+      localStorage.setItem('authToken', user.token);
+      setCurrentUser(appUser);
+      setCurrentPage('dashboard');
+      connectWebSocket(user.token);
+      fetchVehicles();
+      setNotificationWrapper('Registration successful!', 'success');
+    }
+  };
+
   const value = {
     currentPage,
     setCurrentPage,
@@ -319,7 +353,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     profileForm,
     setProfileForm,
     updateProfile,
-    register: async () => {}, // Placeholder for register
+    register,
     updateVehicle: async () => {} // Placeholder for updateVehicle
   };
 

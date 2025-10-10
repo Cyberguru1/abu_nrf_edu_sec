@@ -32,13 +32,6 @@ export const LandingPage = ({
               <Link href="#how-it-works" className="text-gray-700 hover:text-teal-600 transition-colors">
                 How It Works
               </Link>
-              <Button 
-                variant="link" 
-                className="text-gray-700 hover:text-teal-600 transition-colors p-0 h-auto"
-                onClick={onNavigateToLogin}
-              >
-                Register Vehicle
-              </Button>
               {/* <Link href="#dashboard" className="text-gray-700 hover:text-teal-600 transition-colors">
                 Security Dashboard
               </Link> */}
@@ -83,14 +76,6 @@ export const LandingPage = ({
               >
                 Register Your Vehicle
                 <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white hover:text-slate-900 px-8 py-4 text-lg transition-all duration-300 bg-transparent"
-                onClick={onNavigateToLogin}
-              >
-                Explore Features
               </Button>
             </div>
           </div>
