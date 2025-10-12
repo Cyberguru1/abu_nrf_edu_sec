@@ -142,6 +142,8 @@ class WebSocketService {
 
   private handleError(error: Event) {
     console.error('WebSocket error:', error);
+    console.log("Websocket error: reconnecting", error)
+    this.scheduleReconnect
   }
 
   private scheduleReconnect() {
@@ -219,6 +221,22 @@ class WebSocketService {
       this.reconnectAttempts = 0;
       this.attemptConnection();
     }
+  }
+
+  sendResponse(pending_id: string, token: string, confirmed: boolean): boolean {
+    if (!this.isConnected || !this.ws) {
+      console.error('WebSocket is not connected');
+      return false;
+    }
+
+    const response: WebSocketMessage = {
+      type: 'response',
+      pending_id,
+      token,
+      confirmed,
+    };
+    
+    return this.sendMessage(response);
   }
 
   // Reset reconnection attempts (useful for retry logic)

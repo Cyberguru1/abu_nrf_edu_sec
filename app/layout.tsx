@@ -3,6 +3,9 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import { AppProvider } from '@/context/AppContext'
+import { Toaster } from "@/components/ui/sonner"
+import { ExitConfirmationHandler } from '@/components/ui/ExitConfirmationHandler'
+
 
 export const metadata: Metadata = {
   title: 'ABUNRFEDUSEC',
@@ -28,7 +31,9 @@ html {
       </head>
       <body>
         <AppProvider>
+          <Toaster />
           {children}
+          <ExitConfirmationHandler />
         </AppProvider>
       </body>
     </html>

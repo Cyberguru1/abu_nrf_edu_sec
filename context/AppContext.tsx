@@ -59,6 +59,14 @@ interface AppContextState {
   updateProfile: (data: any) => Promise<void>;
   register: (data: RegisterData) => Promise<string | undefined>;
   isInitializing: boolean;
+  exitConfirmation: {
+    isOpen: boolean;
+    message: string;
+    pendingId: string;
+    token: string;
+  };
+  handleConfirmExit: () => void;
+  handleCancelExit: () => void;
 }
 
 const AppContext = createContext<AppContextState | undefined>(undefined);
@@ -75,6 +83,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '' });
   const [isInitializing, setIsInitializing] = useState(true);
+  const [exitConfirmation, setExitConfirmation] = useState({
+    isOpen: false,
+    message: '',
+    pendingId: '',
+    token: '',
+  });
+
+  // Timer for exit confirmation dialog
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    if (exitConfirmation.isOpen) {
+      timeoutId = setTimeout(() => {
+        setExitConfirmation({ isOpen: false, message: '', pendingId: '', token: '' });
+      }, 20000); // 20 seconds
+    }
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [exitConfirmation.isOpen]);
+
 
   // Validate token on mount
   useEffect(() => {
@@ -326,11 +356,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     webSocketService.onConnectionChange(setWebSocketConnected);
     webSocketService.onMessage((message: WebSocketMessage) => {
       if (message.type === 'exit_confirmation') {
-        setNotificationWrapper(message.message || 'Exit confirmation requested', 'info');
+        setExitConfirmation({
+          isOpen: true,
+          message: message.message || 'Are you the one leaving the premises?',
+          pendingId: message.pending_id || '',
+          token: message.token || '',
+        });
+        playNotificationSound();
       } else if (message.type === 'security_alert') {
         setNotificationWrapper(message.message || 'Security alert!', 'error');
       }
     });
+  };
+
+  const playNotificationSound = () => {
+    try {
+      const audio = new Audio('/notification_sound.mp3');
+      audio.play().catch(error => console.error("Audio play failed:", error));
+    } catch (error) {
+      console.error("Failed to play notification sound:", error);
+    }
+  };
+
+  const handleConfirmExit = () => {
+    webSocketService.sendResponse(exitConfirmation.pendingId, exitConfirmation.token, true);
+    setExitConfirmation({ isOpen: false, message: '', pendingId: '', token: '' });
+  };
+
+  const handleCancelExit = () => {
+    webSocketService.sendResponse(exitConfirmation.pendingId, exitConfirmation.token, false);
+    setExitConfirmation({ isOpen: false, message: '', pendingId: '', token: '' });
   };
 
   const register = async (data: RegisterData) => {
@@ -378,6 +433,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     updateProfile,
     register,
     isInitializing,
+    exitConfirmation,
+    handleConfirmExit,
+    handleCancelExit,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
