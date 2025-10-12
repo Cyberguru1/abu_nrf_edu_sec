@@ -1,19 +1,34 @@
+"use client"
+
 import { Button } from "@/components/ui/button";
 import { Shield, ArrowRight, Menu, Mail, MapPin } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FeatureSection } from "./FeaturesSection";
 import { HowItWorks } from "./HowItWorks";
-import Image from "next/image"
+import Image from "next/image";
+import { useAppContext } from "@/context/AppContext";
 
-interface LandingPageProps {
-  onNavigateToRegister: () => void;
-  onNavigateToLogin: () => void;
-}
+export const LandingPage = () => {
+  const router = useRouter();
+  const { currentUser } = useAppContext();
 
-export const LandingPage = ({
-  onNavigateToRegister,
-  onNavigateToLogin,
-}: LandingPageProps) => {
+  const handleGetStarted = () => {
+    if (currentUser) {
+      router.push('/dashboard');
+    } else {
+      router.push('/login');
+    }
+  };
+
+  const handleRegisterVehicle = () => {
+    if (currentUser) {
+      router.push('/dashboard');
+    } else {
+      router.push('/login');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -32,9 +47,6 @@ export const LandingPage = ({
               <Link href="#how-it-works" className="text-gray-700 hover:text-teal-600 transition-colors">
                 How It Works
               </Link>
-              {/* <Link href="#dashboard" className="text-gray-700 hover:text-teal-600 transition-colors">
-                Security Dashboard
-              </Link> */}
               <Link href="#contact" className="text-gray-700 hover:text-teal-600 transition-colors">
                 Contact
               </Link>
@@ -43,7 +55,7 @@ export const LandingPage = ({
             <div className="flex items-center space-x-4">
               <Button 
                 className="bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                onClick={onNavigateToLogin}
+                onClick={handleGetStarted}
               >
                 Get Started
               </Button>
@@ -72,7 +84,7 @@ export const LandingPage = ({
               <Button
                 size="lg"
                 className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transition-all duration-300"
-                onClick={onNavigateToRegister}
+                onClick={handleRegisterVehicle}
               >
                 Register Your Vehicle
                 <ArrowRight className="ml-2 h-5 w-5" />

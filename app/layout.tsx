@@ -2,10 +2,11 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
+import { AppProvider } from '@/context/AppContext'
 
 export const metadata: Metadata = {
   title: 'ABUNRFEDUSEC',
-  description: 'Created with v0',
+  description: 'Advanced intercampus vehicle security platform',
   generator: 'v0.dev',
 }
 
@@ -25,7 +26,11 @@ html {
 }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body>
+        <AppProvider>
+          {children}
+        </AppProvider>
+      </body>
     </html>
   )
 }

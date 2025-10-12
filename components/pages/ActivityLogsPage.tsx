@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Activity, Shield } from "lucide-react";
 import { useAppContext } from '@/context/AppContext';
@@ -8,7 +9,8 @@ import { ActivityLogs } from '../dashboard/ActivityLogs';
 import { NavigationMenu } from '../dashboard/NavigationMenu';
 
 export const ActivityLogsPage = () => {
-  const { currentUser, activityLogs, loading, fetchActivities, setCurrentPage, logout } = useAppContext();
+  const router = useRouter();
+  const { currentUser, activityLogs, loading, fetchActivities, logout } = useAppContext();
 
   useEffect(() => {
     fetchActivities();
@@ -42,7 +44,7 @@ export const ActivityLogsPage = () => {
             </div>
             <Button
               variant="ghost"
-              onClick={() => setCurrentPage("dashboard")}
+              onClick={() => router.push('/dashboard')}
             >
               Back to Dashboard
             </Button>
@@ -57,7 +59,7 @@ export const ActivityLogsPage = () => {
               <NavigationMenu
                 currentPage="activity-logs"
                 currentUser={currentUser}
-                onPageChange={setCurrentPage}
+                onPageChange={(page) => router.push(`/${page}`)}
                 onLogout={logout}
               />
             </div>
@@ -73,7 +75,7 @@ export const ActivityLogsPage = () => {
                 logs={activityLogs}
                 userRole={currentUser.role}
                 onNavigateToVehicle={(plate) => {
-                  setCurrentPage("registered-vehicles");
+                  router.push('/registered-vehicles');
                 }}
               />
             )}

@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { authService, profileService } from '@/services/authService';
 import { vehicleService } from '@/services/vehicleService';
 import { activityService } from '@/services/activityService';
@@ -38,8 +39,6 @@ export type ActivityLog = {
 };
 
 interface AppContextState {
-  currentPage: string;
-  setCurrentPage: (page: string) => void;
   currentUser: AppUser | null;
   login: (credentials: any) => Promise<string | undefined>;
   logout: () => void;
@@ -59,13 +58,14 @@ interface AppContextState {
   setProfileForm: (form: any) => void;
   updateProfile: (data: any) => Promise<void>;
   register: (data: RegisterData) => Promise<string | undefined>;
-  isInitializing: boolean; // NEW: Track initialization state
+  isInitializing: boolean;
 }
 
 const AppContext = createContext<AppContextState | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [currentPage, setCurrentPage] = useState('landing');
+  const router = useRouter();
+  const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
@@ -74,9 +74,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '' });
-  const [isInitializing, setIsInitializing] = useState(true); // NEW: Initialize as true
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  // FIX: Validate token on mount with proper state management
+  // Validate token on mount
   useEffect(() => {
     const validateToken = async () => {
       const token = localStorage.getItem('authToken');
@@ -84,19 +84,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const { user, error } = await authService.getMe(token);
         if (user) {
           setCurrentUser(user);
-          setCurrentPage('dashboard');
           connectWebSocket(token);
           fetchVehicles();
         } else {
-          // Token is invalid, clear it
           localStorage.removeItem('authToken');
         }
       }
-      // Mark initialization as complete
       setIsInitializing(false);
     };
     validateToken();
   }, []);
+
+  // Redirect logic based on auth state
+  useEffect(() => {
+    if (isInitializing) return;
+
+    const publicRoutes = ['/', '/login', '/register'];
+    const isPublicRoute = publicRoutes.includes(pathname);
+
+    if (!currentUser && !isPublicRoute) {
+      router.push('/login');
+    } else if (currentUser && (pathname === '/login' || pathname === '/register')) {
+      router.push('/dashboard');
+    }
+  }, [currentUser, pathname, isInitializing, router]);
 
   const setNotificationWrapper = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setNotification({ show: true, message, type });
@@ -120,7 +131,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       };
       localStorage.setItem('authToken', token);
       setCurrentUser(appUser);
-      setCurrentPage('dashboard');
+      router.push('/dashboard');
       connectWebSocket(token);
       fetchVehicles();
       setNotificationWrapper('Login successful!', 'success');
@@ -130,7 +141,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     localStorage.removeItem('authToken');
     setCurrentUser(null);
-    setCurrentPage('landing');
+    router.push('/');
     webSocketService.disconnect();
   };
 
@@ -174,7 +185,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         userId: currentUser?.id || '',
         status: 'Active'
       }]);
-      setCurrentPage('registered-vehicles');
+      router.push('/registered-vehicles');
       setNotificationWrapper('Vehicle registered successfully!', 'success');
     }
   };
@@ -339,7 +350,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         };
       localStorage.setItem('authToken', user.token);
       setCurrentUser(appUser);
-      setCurrentPage('dashboard');
+      router.push('/dashboard');
       connectWebSocket(user.token);
       fetchVehicles();
       setNotificationWrapper('Registration successful!', 'success');
@@ -347,8 +358,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const value = {
-    currentPage,
-    setCurrentPage,
     currentUser,
     login,
     logout,
@@ -368,7 +377,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setProfileForm,
     updateProfile,
     register,
-    isInitializing, // NEW: Expose initialization state
+    isInitializing,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

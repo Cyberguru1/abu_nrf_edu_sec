@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Car, LogOut, Menu, Shield } from "lucide-react";
@@ -11,7 +12,8 @@ import { NavigationMenu } from '../dashboard/NavigationMenu';
 import { ConnectivityIndicator } from '../ui/ConnectivityIndicator';
 
 export const DashboardPage = () => {
-  const { currentUser, vehicles, activityLogs, fetchVehicles, fetchActivities, logout, setCurrentPage, webSocketConnected } = useAppContext();
+  const router = useRouter();
+  const { currentUser, vehicles, activityLogs, fetchVehicles, fetchActivities, logout, webSocketConnected } = useAppContext();
 
   useEffect(() => {
     fetchVehicles();
@@ -20,6 +22,10 @@ export const DashboardPage = () => {
 
   const userVehicles = vehicles.filter((v) => v.userId === currentUser?.id);
   const recentActivities = activityLogs.slice(0, 3);
+
+  const handleNavigate = (path: string) => {
+    router.push(`/${path}`);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -42,7 +48,7 @@ export const DashboardPage = () => {
                     <NavigationMenu
                       currentPage="dashboard"
                       currentUser={currentUser}
-                      onPageChange={setCurrentPage}
+                      onPageChange={handleNavigate}
                       onLogout={logout}
                     />
                   )}
@@ -77,7 +83,7 @@ export const DashboardPage = () => {
               <NavigationMenu
                 currentPage="dashboard"
                 currentUser={currentUser}
-                onPageChange={setCurrentPage}
+                onPageChange={handleNavigate}
                 onLogout={logout}
               />
             </div>
@@ -89,7 +95,7 @@ export const DashboardPage = () => {
               activeSessionsCount={activityLogs.filter(log => log.logType === 'Entry').length}
               totalVehiclesCount={vehicles.length}
               recentActivities={recentActivities}
-              onNavigate={setCurrentPage}
+              onNavigate={handleNavigate}
             />
           </main>
         </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { User, Shield } from "lucide-react";
 import { useAppContext } from '@/context/AppContext';
@@ -8,7 +9,8 @@ import { RegisteredVehicles } from '../dashboard/RegisteredVehicles';
 import { NavigationMenu } from '../dashboard/NavigationMenu';
 
 export const RegisteredVehiclesPage = () => {
-  const { currentUser, vehicles, loading, fetchVehicles, deleteVehicle, setCurrentPage, logout } = useAppContext();
+  const router = useRouter();
+  const { currentUser, vehicles, loading, fetchVehicles, deleteVehicle, logout } = useAppContext();
 
   useEffect(() => {
     fetchVehicles();
@@ -33,7 +35,7 @@ export const RegisteredVehiclesPage = () => {
             </div>
             <Button
               variant="ghost"
-              onClick={() => setCurrentPage("dashboard")}
+              onClick={() => router.push('/dashboard')}
             >
               Back to Dashboard
             </Button>
@@ -47,7 +49,7 @@ export const RegisteredVehiclesPage = () => {
               <NavigationMenu
                 currentPage="registered-vehicles"
                 currentUser={currentUser}
-                onPageChange={setCurrentPage}
+                onPageChange={(page) => router.push(`/${page}`)}
                 onLogout={logout}
               />
             </div>
@@ -62,12 +64,10 @@ export const RegisteredVehiclesPage = () => {
               <RegisteredVehicles
                 vehicles={userVehicles}
                 onEdit={(vehicleId) => {
-                  // This part needs to be thought out.
-                  // Maybe set an editingVehicleId in context and navigate.
-                  setCurrentPage("vehicle-registration");
+                  router.push('/vehicle-registration');
                 }}
                 onDelete={deleteVehicle}
-                onRegisterNew={() => setCurrentPage("vehicle-registration")}
+                onRegisterNew={() => router.push('/vehicle-registration')}
                 loading={loading}
               />
             )}

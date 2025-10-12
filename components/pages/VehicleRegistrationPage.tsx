@@ -1,11 +1,13 @@
 "use client"
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
 import { VehicleRegistration } from '../dashboard/VehicleRegistration';
 
 export const VehicleRegistrationPage = () => {
-  const { addVehicle, setCurrentPage } = useAppContext();
+  const router = useRouter();
+  const { addVehicle } = useAppContext();
   const [formData, setFormData] = useState({
     plateNumber: '',
     model: '',
@@ -31,7 +33,7 @@ export const VehicleRegistrationPage = () => {
       onColorChange={(color) => setFormData({ ...formData, color })}
       onTypeChange={(type) => setFormData({ ...formData, type })}
       onSubmit={handleSubmit}
-      onCancel={() => setCurrentPage('dashboard')}
+      onCancel={() => router.push('/dashboard')}
     />
   );
 };

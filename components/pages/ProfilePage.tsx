@@ -1,13 +1,15 @@
 "use client"
 
 import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { User, Shield } from "lucide-react";
 import { useAppContext } from '@/context/AppContext';
 import { ProfileContainer } from '../dashboard/ProfileContainer';
 
 export const ProfilePage = () => {
-  const { currentUser, profileForm, fetchProfile, updateProfile, profileLoading, setCurrentPage } = useAppContext();
+  const router = useRouter();
+  const { currentUser, profileForm, fetchProfile, updateProfile, profileLoading } = useAppContext();
 
   useEffect(() => {
     fetchProfile();
@@ -30,7 +32,7 @@ export const ProfilePage = () => {
             </div>
             <Button
               variant="ghost"
-              onClick={() => setCurrentPage("dashboard")}
+              onClick={() => router.push('/dashboard')}
             >
               Back to Dashboard
             </Button>
