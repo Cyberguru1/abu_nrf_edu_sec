@@ -5,8 +5,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import { authService, profileService } from '@/services/authService';
 import { vehicleService } from '@/services/vehicleService';
 import { activityService } from '@/services/activityService';
-import { webSocketService, WebSocketMessage } from '@/services/websocketService';
+import { useUserWebSocket } from '@/hooks/useUserWebSocket';
 import { VehicleActivity, RegisterData } from '@/types/auth';
+import { env } from '@/config/config';
 
 export type AppUser = {
   id: string;
@@ -51,6 +52,7 @@ interface AppContextState {
   notification: { show: boolean; message: string; type: 'success' | 'error' | 'info' };
   setNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
   webSocketConnected: boolean;
+  webSocketStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
   loading: boolean;
   profileLoading: boolean;
   fetchProfile: () => Promise<void>;
@@ -78,11 +80,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [notification, setNotification] = useState({ show: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
-  const [webSocketConnected, setWebSocketConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '' });
   const [isInitializing, setIsInitializing] = useState(true);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  // Use the WebSocket hook
+  const {
+    isConnected: webSocketConnected,
+    connectionStatus: webSocketStatus,
+    exitConfirmation: wsExitConfirmation,
+    securityAlerts,
+    sendResponse,
+    clearExitConfirmation,
+    clearSecurityAlert,
+  } = useUserWebSocket(env.WS_URL, authToken);
+
+  // Convert WebSocket exit confirmation to local state format
   const [exitConfirmation, setExitConfirmation] = useState({
     isOpen: false,
     message: '',
@@ -90,12 +105,35 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     token: '',
   });
 
+  // Sync WebSocket exit confirmation with local state
+  useEffect(() => {
+    if (wsExitConfirmation) {
+      setExitConfirmation({
+        isOpen: true,
+        message: wsExitConfirmation.message,
+        pendingId: wsExitConfirmation.pending_id,
+        token: wsExitConfirmation.token,
+      });
+    }
+  }, [wsExitConfirmation]);
+
+  // Handle security alerts
+  useEffect(() => {
+    if (securityAlerts.length > 0) {
+      securityAlerts.forEach((alert, index) => {
+        setNotificationWrapper(alert, 'error');
+        clearSecurityAlert(index);
+      });
+    }
+  }, [securityAlerts]);
+
   // Timer for exit confirmation dialog
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | null = null;
     if (exitConfirmation.isOpen) {
       timeoutId = setTimeout(() => {
         setExitConfirmation({ isOpen: false, message: '', pendingId: '', token: '' });
+        clearExitConfirmation();
       }, 20000); // 20 seconds
     }
     return () => {
@@ -103,8 +141,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         clearTimeout(timeoutId);
       }
     };
-  }, [exitConfirmation.isOpen]);
-
+  }, [exitConfirmation.isOpen, clearExitConfirmation]);
 
   // Validate token on mount
   useEffect(() => {
@@ -114,7 +151,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const { user, error } = await authService.getMe(token);
         if (user) {
           setCurrentUser(user);
-          connectWebSocket(token);
+          setAuthToken(token); // This will trigger WebSocket connection
           fetchVehicles();
         } else {
           localStorage.removeItem('authToken');
@@ -161,8 +198,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       };
       localStorage.setItem('authToken', token);
       setCurrentUser(appUser);
+      setAuthToken(token); // This will trigger WebSocket connection
       router.push('/dashboard');
-      connectWebSocket(token);
       fetchVehicles();
       setNotificationWrapper('Login successful!', 'success');
     }
@@ -171,8 +208,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     localStorage.removeItem('authToken');
     setCurrentUser(null);
+    setAuthToken(null); // This will disconnect WebSocket
     router.push('/');
-    webSocketService.disconnect();
   };
 
   const fetchVehicles = async () => {
@@ -351,41 +388,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const connectWebSocket = (token: string) => {
-    webSocketService.connect(token);
-    webSocketService.onConnectionChange(setWebSocketConnected);
-    webSocketService.onMessage((message: WebSocketMessage) => {
-      if (message.type === 'exit_confirmation') {
-        setExitConfirmation({
-          isOpen: true,
-          message: message.message || 'Are you the one leaving the premises?',
-          pendingId: message.pending_id || '',
-          token: message.token || '',
-        });
-        playNotificationSound();
-      } else if (message.type === 'security_alert') {
-        setNotificationWrapper(message.message || 'Security alert!', 'error');
-      }
-    });
-  };
-
-  const playNotificationSound = () => {
-    try {
-      const audio = new Audio('/notification_sound.mp3');
-      audio.play().catch(error => console.error("Audio play failed:", error));
-    } catch (error) {
-      console.error("Failed to play notification sound:", error);
-    }
-  };
-
   const handleConfirmExit = () => {
-    webSocketService.sendResponse(exitConfirmation.pendingId, exitConfirmation.token, true);
+    console.log('✅ Confirming exit:', exitConfirmation.pendingId);
+    sendResponse(exitConfirmation.pendingId, exitConfirmation.token, true);
     setExitConfirmation({ isOpen: false, message: '', pendingId: '', token: '' });
+    clearExitConfirmation();
   };
 
   const handleCancelExit = () => {
-    webSocketService.sendResponse(exitConfirmation.pendingId, exitConfirmation.token, false);
+    console.log('❌ Canceling exit:', exitConfirmation.pendingId);
+    sendResponse(exitConfirmation.pendingId, exitConfirmation.token, false);
     setExitConfirmation({ isOpen: false, message: '', pendingId: '', token: '' });
+    clearExitConfirmation();
   };
 
   const register = async (data: RegisterData) => {
@@ -405,8 +419,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         };
       localStorage.setItem('authToken', user.token);
       setCurrentUser(appUser);
+      setAuthToken(user.token); // This will trigger WebSocket connection
       router.push('/dashboard');
-      connectWebSocket(user.token);
       fetchVehicles();
       setNotificationWrapper('Registration successful!', 'success');
     }
@@ -425,6 +439,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     notification,
     setNotification: setNotificationWrapper,
     webSocketConnected,
+    webSocketStatus,
     loading,
     profileLoading,
     fetchProfile,
