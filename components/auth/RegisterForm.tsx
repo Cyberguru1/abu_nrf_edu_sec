@@ -4,26 +4,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus } from "lucide-react";
-import { authService } from '@/services/authService';
+import { useAppContext } from '@/context/AppContext';
+import { RegisterData } from '@/types/auth';
 
 interface RegisterFormProps {
-  onSuccess: () => void;
   onNavigateToLogin: () => void;
   onNavigateToHome: () => void;
 }
 
 export const RegisterForm = ({
-  onSuccess,
   onNavigateToLogin,
   onNavigateToHome,
 }: RegisterFormProps) => {
-  const [formData, setFormData] = useState({
+  const { register, loading, notification } = useAppContext();
+  const [formData, setFormData] = useState<RegisterData>({
     name: '',
     email: '',
     password: ''
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -31,26 +29,8 @@ export const RegisterForm = ({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError(null);
-
-  try {
-    const result = await authService.register(formData);
-    
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-
-    if (result.user) {
-      onSuccess(); // This will trigger the notification and redirect
-    }
-  } catch (err) {
-    setError('An unexpected error occurred');
-  } finally {
-    setLoading(false);
-  }
+    e.preventDefault();
+    await register(formData);
   };
 
   return (
@@ -64,9 +44,9 @@ export const RegisterForm = ({
           <CardDescription>Register for vehicle monitoring system</CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
+          {notification.show && notification.type === 'error' && (
             <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-              {error}
+              {notification.message}
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
