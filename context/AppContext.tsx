@@ -31,12 +31,12 @@ export type Vehicle = {
 export type ActivityLog = {
   id: string;
   vehiclePlate: string;
-  vehicleName: string;
   logTime: string;
   logType: 'Entry' | 'Exit';
   timestamp?: string;
   is_entry?: boolean;
   gate_name: string;
+  model?: string;
 };
 
 interface AppContextState {
@@ -315,7 +315,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const transformedLogs: ActivityLog[] = sortedActivities.map((activity) => ({
       id: activity.id,
       vehiclePlate: activity.plate_number,
-      vehicleName: 'Unknown Vehicle',
+      vehicleName: activity.model,
       logTime: activity.timestamp,
       logType: activity.is_entry ? 'Entry' : 'Exit',
       gate_name: activity.gate_name,
