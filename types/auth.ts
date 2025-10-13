@@ -82,6 +82,7 @@ export interface VehicleActivity {
   timestamp: string;
   created_at?: string;
   updated_at?: string;
+  model?: string;
 }
 
 export interface LogVehicleActivityInput {
