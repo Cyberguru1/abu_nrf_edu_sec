@@ -1,16 +1,24 @@
 "use client"
 
 import React from 'react';
-import { useAppContext } from '@/context/AppContext';
+import { useRouter } from 'next/navigation';
 import { RegisterForm } from '../auth/RegisterForm';
 
 export const RegisterPage = () => {
-    const { setCurrentPage } = useAppContext();
+  const router = useRouter();
 
-    return (
-        <RegisterForm
-            onNavigateToLogin={() => setCurrentPage("login")}
-            onNavigateToHome={() => setCurrentPage("landing")}
-        />
-    );
+  const handleNavigateToLogin = () => {
+    router.push('/login');
+  };
+
+  const handleNavigateToHome = () => {
+    router.push('/');
+  };
+
+  return (
+    <RegisterForm
+      onNavigateToLogin={handleNavigateToLogin}
+      onNavigateToHome={handleNavigateToHome}
+    />
+  );
 };

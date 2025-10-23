@@ -108,10 +108,11 @@ export const RegisterForm = ({
             <div className="text-center text-sm mt-4">
               Already have an account?{' '}
               <Button 
-                variant="link" 
-                className="text-blue-600 hover:text-blue-800 p-0 h-auto" 
+                variant="link"
+                className="text-blue-600 hover:text-blue-800 p-0 h-auto"
                 onClick={onNavigateToLogin}
                 disabled={loading}
+                type="button"
               >
                 Login
               </Button>
