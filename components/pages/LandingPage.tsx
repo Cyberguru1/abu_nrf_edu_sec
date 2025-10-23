@@ -8,9 +8,9 @@ export const LandingPage = () => {
 
   const handleRegisterClick = () => {
     if (currentUser) {
-        setCurrentPage('dashboard');
+      setCurrentPage('dashboard');
     } else {
-        setCurrentPage('login');
+      setCurrentPage('login');
     }
   };
 

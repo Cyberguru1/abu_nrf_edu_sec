@@ -39,6 +39,8 @@ export type ActivityLog = {
   model?: string;
 };
 
+export type PageType = 'landing' | 'login' | 'register' | 'dashboard';
+
 interface AppContextState {
   currentUser: AppUser | null;
   login: (credentials: any) => Promise<string | undefined>;
@@ -69,6 +71,8 @@ interface AppContextState {
   };
   handleConfirmExit: () => void;
   handleCancelExit: () => void;
+  currentPage: PageType;
+  setCurrentPage: (page: PageType) => void;
 }
 
 const AppContext = createContext<AppContextState | undefined>(undefined);
@@ -85,6 +89,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '' });
   const [isInitializing, setIsInitializing] = useState(true);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<PageType>('landing');
 
   // Use the WebSocket hook
   const {
@@ -451,6 +456,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     exitConfirmation,
     handleConfirmExit,
     handleCancelExit,
+    currentPage,
+    setCurrentPage,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
