@@ -8,8 +8,17 @@ import { FeatureSection } from "./FeaturesSection";
 import { HowItWorks } from "./HowItWorks";
 import Image from "next/image";
 import { useAppContext } from "@/context/AppContext";
+import React from 'react';
 
-export const LandingPage = () => {
+interface LandingPageProps {
+  onNavigateToRegister: () => void;
+  onNavigateToLogin: () => void;
+}
+
+export const LandingPage: React.FC<LandingPageProps> = ({
+  onNavigateToRegister,
+  onNavigateToLogin,
+}) => {
   const router = useRouter();
   const { currentUser } = useAppContext();
 

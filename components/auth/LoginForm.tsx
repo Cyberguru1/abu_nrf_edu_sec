@@ -115,6 +115,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               Don't have an account yet?{' '}
               <Button
                 variant="link"
+                type="button" 
                 className="text-blue-600 hover:text-blue-800 p-0 h-auto"
                 onClick={onNavigateToRegister}
               >

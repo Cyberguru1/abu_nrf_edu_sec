@@ -1,11 +1,13 @@
 "use client"
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/context/AppContext';
 import { LoginForm } from '../auth/LoginForm';
 
 export const LoginPage = () => {
-  const { login, loading, setCurrentPage } = useAppContext();
+  const router = useRouter();
+  const { login, loading } = useAppContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +21,14 @@ export const LoginPage = () => {
     }
   };
 
+  const handleNavigateToRegister = () => {
+    router.push('/register');
+  };
+
+  const handleNavigateToHome = () => {
+    router.push('/');
+  };
+
   return (
     <LoginForm
       email={email}
@@ -28,8 +38,8 @@ export const LoginPage = () => {
       onEmailChange={setEmail}
       onPasswordChange={setPassword}
       onSubmit={handleSubmit}
-      onNavigateToRegister={() => setCurrentPage('register')}
-      onNavigateToHome={() => setCurrentPage('landing')}
+      onNavigateToRegister={handleNavigateToRegister}
+      onNavigateToHome={handleNavigateToHome}
     />
   );
 };
